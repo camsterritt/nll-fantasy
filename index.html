@@ -1827,7 +1827,7 @@ function vMock(){
   const order = S.draft?.order?.length ? S.draft.order : teamIds();
   const me = myTeam() && order.includes(myTeam()) ? myTeam() : '';
   const setup = `<div class="card stack"><div class="row"><h3>Mock draft</h3><span class="spacer"></span></div>
-    <p class="sub" style="margin:0">${me ? `You draft for <b>${esc(tName(me))}</b> (pick ${order.indexOf(me)+1}); every other team drafts automatically.` : 'You haven’t picked a team, so every team drafts automatically.'} Computer teams draft by 2027 projected points per game against a replacement-level starter, fill 5 F, 4 D/T and 1 G before building the bench, and mix in a little unpredictability like real managers. Nothing is saved; it’s only on your screen.</p>
+    <p class="sub" style="margin:0">${me ? `You draft for <b>${esc(tName(me))}</b> (pick ${order.indexOf(me)+1}); every other team drafts automatically.` : 'You haven’t picked a team, so every team drafts automatically.'} Computer teams draft by 2027 projected points per game, fill 5 F, 4 D/T and 1 G before building the bench, and mix in a little unpredictability like real managers. Nothing is saved; it’s only on your screen.</p>
     <div class="row"><button class="btn primary" data-act="runMock">${S.mock ? 'Start a new mock' : 'Start mock draft'}</button></div></div>`;
   if(!S.mock) return setup;
   const m = S.mock, done = mockDone(m), n = m.order.length;
