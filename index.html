@@ -1901,18 +1901,29 @@ function vDraft(){
   const n = d.order.length;
   const byIdx = d.picks || [];
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
-  const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>Round ${oc.round}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${teamDot(oc.team,'lg')}${esc(tName(oc.team))}</div></div><span class="spacer"></span>
+  const c = cfg(), total = n * d.rounds;
+  const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>Round ${oc.round} of ${d.rounds}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${esc(tName(oc.team))}</div></div><span class="spacer"></span>
       ${oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
     : `<div class="clock"><div><small>Draft complete</small><div class="big">${byIdx.length} players drafted</div></div><span class="spacer"></span>${isCommish()&&d.status!=='done'?'<button class="btn sm primary" data-act="finishDraft">Close the draft</button>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`;
   const seg = `<div class="seg" role="group">${[['all','Players'],['F','F'],['DT','D/T'],['G','Goalies']].map(([v,l])=>`<button data-act="dfilt" data-v="${v}" aria-pressed="${S.dpos===v}">${l}</button>`).join('')}</div>`;
-  return `<div class="stack"><h2>Draft</h2>${clock}
-    <div class="two">
-      <div class="card flush" style="align-self:start"><div style="padding:12px;display:flex;flex-direction:column;gap:8px"><h3>Available</h3>
+  const teamAt = i => { const r = Math.floor(i/n), k = i % n; return d.order[r % 2 ? n-1-k : k]; };
+  let mineCard = '';
+  if(mt && d.order.includes(mt)){
+    const mine = byIdx.filter(x => x.team===mt).map(x => x.pid);
+    const cnt = {F:0, DT:0, G:0}; mine.forEach(p => cnt[posKey(pl(p).pos)]++);
+    const need = ['F','DT','G'].map(s => `${posChip(s==='DT'?'D':s)} ${Math.min(cnt[s], c.slots[s])}/${c.slots[s]}`).join(' &nbsp; ');
+    let nextMine = -1; for(let k = byIdx.length + (oc && oc.team===mt ? 1 : 0); k < total; k++) if(teamAt(k)===mt){ nextMine = k; break; }
+    mineCard = `<div class="card stack" style="gap:8px;align-self:start"><div class="row"><h3>Your team</h3><span class="spacer"></span><span class="sub">${mine.length}/${d.rounds} picked${nextMine>=0?` · next pick #${nextMine+1}`:''}</span></div>
+      <div class="legend">Starters filled: ${need}</div>
+      ${mine.length ? `<div class="chips">${mine.map(p=>`<span class="chip" style="cursor:default;display:inline-flex;gap:6px;align-items:center">${posChip(pl(p).pos)}${esc(pl(p).n)}${teamBadge(pl(p).t)} <span class="dim">${fmt(projOf(p))}</span></span>`).join('')}</div>` : '<p class="sub" style="margin:0">No picks yet.</p>'}</div>`;
+  }
+  const avail = `<div class="card flush"${mineCard ? '' : ' style="align-self:start"'}><div style="padding:12px;display:flex;flex-direction:column;gap:8px"><h3>Available</h3>
         <div class="row"><input type="text" id="dq" placeholder="Search" value="${esc(S.dq)}" data-act="dq" style="flex:1 1 140px">${seg}</div>
         ${canPick?'':'<p class="sub" style="margin:0">You can pick when your team is on the clock.</p>'}</div>
-        <p class="sub" style="margin:0 12px 8px">Hover or tap a player to see his schedule.</p><div class="tbl" id="dlist" style="max-height:560px;overflow:auto"></div></div>
-      <div class="card flush" style="align-self:start"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, oc ? oc.i : -1, false)}</div></div>
-    </div>
+        <p class="sub" style="margin:0 12px 8px">Hover or tap a player to see his schedule.</p><div class="tbl" id="dlist" style="max-height:440px;overflow:auto"></div></div>`;
+  return `<div class="stack"><h2>Draft</h2>${clock}
+    ${mineCard ? `<div class="two">${mineCard}${avail}</div>` : avail}
+    <div class="card flush"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, oc ? oc.i : -1, true, mt)}</div></div>
     ${mt ? slotTableHtml(byIdx.filter(x=>x.team===mt).map(x=>x.pid), 'Your lineup by week') : ''}</div>`;
 }
 function renderDraftList(){
@@ -1923,7 +1934,7 @@ function renderDraftList(){
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
   const list = filteredPlayers(S.dq, S.dpos, 'all', 'rank').filter(p => !taken.has(p) && !own[p] && pl(p).t && (S.dpos !== 'all' || posKey(pl(p).pos) !== 'G')).slice(0, 150);
   box.innerHTML = `<table><tbody>${list.map(p => { const P=S.players[p];
-    return `<tr data-sched="${esc(p)}"><td><div class="pname">${posChip(P.pos)}<b>${esc(P.n)}</b>${teamBadge(P.t)}${injTag(p)}${P.rook?`<span class="pill rook" title="${(P.rook.y?P.rook.y+' draft, pick '+P.rook.pk:'No recent NLL games')+(P.st==='Draft rights'?' · unsigned draft rights':'')}">R</span>`:''}</div></td><td class="r"><b>${fmt(P.proj??null)}</b> <span class="dim" title="Rank among ${posLab(P.pos)} by 2027 projection">${posRank(p) ? posLab(P.pos)+' #'+posRank(p) : ''}</span></td>
+    return `<tr data-sched="${esc(p)}"><td><div class="pname">${posChip(P.pos)}<b>${esc(P.n)}</b>${teamBadge(P.t)}${injTag(p)}${P.rook?`<span class="pill rook" title="${(P.rook.y?P.rook.y+' draft, pick '+P.rook.pk:'No recent NLL games')+(P.st==='Draft rights'?' · unsigned draft rights':'')}">R</span>`:''}</div></td><td class="r"><b>${fmt(projOf(p))}</b> <span class="dim" title="Rank among ${posLab(P.pos)} by 2027 projection">${posRank(p) ? posLab(P.pos)+' #'+posRank(p) : ''}</span></td>
     <td class="r">${canPick?`<button class="btn sm ${S.confirm==='pick:'+p?'primary':''}" data-act="pick" data-p="${esc(p)}">${S.confirm==='pick:'+p?'Confirm':'Draft'}</button>`:''}</td></tr>`; }).join('')
     || '<tr><td class="dim" style="text-align:center;padding:20px">No available players match.</td></tr>'}</tbody></table>`;
 }
