@@ -1198,7 +1198,7 @@ function openEditTeam(tid){
 }
 async function codeHash(tid, code){ const d = new TextEncoder().encode('nll-team:'+tid+':'+code); const h = await crypto.subtle.digest('SHA-256', d); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2,'0')).join(''); }
 function needWelcome(){ return !!(S.ready.teams && S.config && teamIds().length && !S.noDb && (!S.entered || S.forceWelcome)); }
-function enterSite(toTeam){ S.entered = true; S.forceWelcome = false; S.wSel = null; S.wErr = false; if(toTeam){ if(location.hash === '#team'){ S.view = 'team'; } else location.hash = '#team'; } render(); }
+function enterSite(toTeam){ S.entered = true; S.forceWelcome = false; S.wSel = null; S.wErr = false; if(toTeam){ const v = S.draft?.status === 'done' ? 'team' : 'draft'; if(location.hash === '#'+v){ S.view = v; } else location.hash = '#'+v; } render(); }
 function vWelcome(){
   const ids = teamIds(), sel = S.wSel;
   const card = t => { const T = S.teams[t], c = T.colors, open = !T.code && (!T.owner || T.owner === S.me);
