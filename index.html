@@ -130,7 +130,7 @@ label.f input,label.f select{color:var(--ink);font-weight:400;font-size:14px;let
 .tl{width:22px;height:22px;object-fit:contain;flex:none;vertical-align:middle}
 .board .c .tl{width:15px;height:15px}
 .board .h.me{color:var(--accent)}
-.clock .btn{background:transparent;color:var(--band-ink);border-color:rgba(255,255,255,.35)}
+.clock .btn{background:transparent;color:var(--band-ink);border-color:color-mix(in srgb, var(--band-ink) 40%, transparent)}
 .clock .btn:hover:not(:disabled){border-color:var(--band-ink)}
 .board .c.mine{outline:2px solid var(--ink);outline-offset:-1px}
 tr.meRow td{background:var(--accent-soft)}
@@ -240,7 +240,7 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .slot.empty{border-style:dashed}
 
 /* draft */
-.clock{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--band);color:var(--band-ink);border-radius:10px;padding:14px 18px}
+.clock{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--band);color:var(--band-ink);border-radius:10px;padding:14px 18px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
 .clock .big{font-family:var(--f-display);font-weight:800;font-size:30px;text-transform:uppercase;line-height:1}
 .clock small{color:var(--band-muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
 .board{display:grid;gap:4px;min-width:760px}
@@ -1176,6 +1176,7 @@ const teamDot = () => '';
 const tc = t => teamCol(t) ? ' tc' : '';
 const tcs = t => { const c = teamCol(t); return c ? ` style="--tb:${c[0]};--tf:${c[1]}"` : ''; };
 const tPill = t => { const c = teamCol(t); return `<span class="tpill"${c ? ` style="background:${c[0]};color:${c[1]}"` : ''}>${esc(tName(t))}</span>`; };
+const bandVars = t => { const c = teamCol(t); return c ? ` style="--band:${c[0]};--band-ink:${c[1]};--band-muted:color-mix(in srgb, ${c[1]} 72%, ${c[0]});--band2:color-mix(in srgb, ${c[1]} 14%, ${c[0]})"` : ''; };
 const tBar = t => { const c = teamCol(t); return c ? `--tb:${c[0]};--tf:${c[1]}` : ''; };
 function colorPicker(bg, fg, name){
   const low = contrast(bg, fg) < 3;
@@ -1842,7 +1843,7 @@ function vMock(){
     const seg = `<div class="seg" role="group">${[['all','Players'],['F','F'],['DT','D/T'],['G','Goalies']].map(([v,l])=>`<button data-act="mfilt" data-v="${v}" aria-pressed="${(S.mpos||'all')===v}">${l}</button>`).join('')}</div>`;
     const nextMine = (() => { for(let k=i+1;k<mockTotal(m);k++) if(mockTeamAt(m,k)===m.me) return k; return -1; })();
     return `${setup}
-      <div class="clock"><div><small>Round ${r} of ${m.rounds}, pick ${i%n+1} · #${i+1} overall</small><div class="big">${teamDot(team,'lg')}${esc(tName(team))}</div></div><span class="spacer"></span>
+      <div class="clock"${bandVars(team)}><div><small>Round ${r} of ${m.rounds}, pick ${i%n+1} · #${i+1} overall</small><div class="big">${teamDot(team,'lg')}${esc(tName(team))}</div></div><span class="spacer"></span>
         <span class="pill live">You’re on the clock</span>
         <button class="btn sm" data-act="mockAuto">Auto-pick for me</button><button class="btn sm" data-act="mockSim">Sim to the end</button></div>
       <div class="two">
@@ -1900,7 +1901,7 @@ function vDraft(){
   const n = d.order.length;
   const byIdx = d.picks || [];
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
-  const clock = oc ? `<div class="clock"><div><small>Round ${oc.round}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${teamDot(oc.team,'lg')}${esc(tName(oc.team))}</div></div><span class="spacer"></span>
+  const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>Round ${oc.round}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${teamDot(oc.team,'lg')}${esc(tName(oc.team))}</div></div><span class="spacer"></span>
       ${oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
     : `<div class="clock"><div><small>Draft complete</small><div class="big">${byIdx.length} players drafted</div></div><span class="spacer"></span>${isCommish()&&d.status!=='done'?'<button class="btn sm primary" data-act="finishDraft">Close the draft</button>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`;
   const seg = `<div class="seg" role="group">${[['all','Players'],['F','F'],['DT','D/T'],['G','Goalies']].map(([v,l])=>`<button data-act="dfilt" data-v="${v}" aria-pressed="${S.dpos===v}">${l}</button>`).join('')}</div>`;
