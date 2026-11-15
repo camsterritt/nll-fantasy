@@ -255,6 +255,7 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .board .c small{display:flex;align-items:center;gap:4px}
 .board .c .tb{font-size:9px;padding:2px 3px}
 .board .rn{font-family:var(--f-display);font-weight:700;color:var(--muted);display:grid;place-items:center;font-size:14px}
+.dl-t thead th{position:sticky;top:0;z-index:1;background:var(--surface2)}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:16px}
 @media (max-width:820px){.two{grid-template-columns:minmax(0,1fr)}}
 
@@ -1882,7 +1883,7 @@ function renderMockList(){
   const k = keyOf(S.mq||''), pos = S.mpos||'all';
   const list = [...m.avail].filter(p => { const P = pl(p); return (pos==='all' ? posKey(P.pos)!=='G' : posKey(P.pos)===pos) && (!k || keyOf(P.n).includes(k) || keyOf(P.t)===k); })
     .sort((a,b)=>projOf(b)-projOf(a)).slice(0, 150);
-  box.innerHTML = `<table><tbody>${list.map(p => { const P = pl(p), rule = mockRule(m, team, p);
+  box.innerHTML = `<table class="dl-t"><thead><tr><th>Player</th><th class="r">Proj PPG <span class="dim" style="font-weight:600">· rank</span></th><th></th></tr></thead><tbody>${list.map(p => { const P = pl(p), rule = mockRule(m, team, p);
     return `<tr data-sched="${esc(p)}"><td><div class="pname">${posChip(P.pos)}<b>${esc(P.n)}</b>${teamBadge(P.t)}${injTag(p)}${P.rook?`<span class="pill rook" title="${(P.rook.y?P.rook.y+' draft, pick '+P.rook.pk:'No recent NLL games')+(P.st==='Draft rights'?' · unsigned draft rights':'')}">R</span>`:''}</div></td>
       <td class="r"><b>${fmt(projOf(p))}</b> <span class="dim" title="Rank among ${posLab(P.pos)} by 2027 projection">${posRank(p) ? posLab(P.pos)+' #'+posRank(p) : ''}</span></td>
       <td class="r">${rule.ok ? `<button class="btn sm" data-act="mockPick" data-p="${esc(p)}">Draft</button>` : `<span class="sub" title="${esc(rule.why)}">${esc(rule.why)}</span>`}</td></tr>`; }).join('')
@@ -1933,7 +1934,7 @@ function renderDraftList(){
   const taken = new Set((d.picks||[]).map(p=>p.pid));
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
   const list = filteredPlayers(S.dq, S.dpos, 'all', 'rank').filter(p => !taken.has(p) && !own[p] && pl(p).t && (S.dpos !== 'all' || posKey(pl(p).pos) !== 'G')).slice(0, 150);
-  box.innerHTML = `<table><tbody>${list.map(p => { const P=S.players[p];
+  box.innerHTML = `<table class="dl-t"><thead><tr><th>Player</th><th class="r">Proj PPG <span class="dim" style="font-weight:600">· rank</span></th><th></th></tr></thead><tbody>${list.map(p => { const P=S.players[p];
     return `<tr data-sched="${esc(p)}"><td><div class="pname">${posChip(P.pos)}<b>${esc(P.n)}</b>${teamBadge(P.t)}${injTag(p)}${P.rook?`<span class="pill rook" title="${(P.rook.y?P.rook.y+' draft, pick '+P.rook.pk:'No recent NLL games')+(P.st==='Draft rights'?' · unsigned draft rights':'')}">R</span>`:''}</div></td><td class="r"><b>${fmt(projOf(p))}</b> <span class="dim" title="Rank among ${posLab(P.pos)} by 2027 projection">${posRank(p) ? posLab(P.pos)+' #'+posRank(p) : ''}</span></td>
     <td class="r">${canPick?`<button class="btn sm ${S.confirm==='pick:'+p?'primary':''}" data-act="pick" data-p="${esc(p)}">${S.confirm==='pick:'+p?'Confirm':'Draft'}</button>`:''}</td></tr>`; }).join('')
     || '<tr><td class="dim" style="text-align:center;padding:20px">No available players match.</td></tr>'}</tbody></table>`;
