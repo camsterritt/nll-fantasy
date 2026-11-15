@@ -1207,7 +1207,7 @@ function enterSite(toTeam){ S.entered = true; S.forceWelcome = false; S.wSel = n
 function vWelcome(){
   const ids = teamIds(), sel = S.wSel;
   const card = t => { const T = S.teams[t], c = T.colors, open = !T.code && (!T.owner || T.owner === S.me);
-    return `<button class="wl-team${sel===t?' on':''}${c?' tc':''}" data-act="wPick" data-t="${t}"${c ? ` style="--tb:${c[0]};--tf:${c[1]}"` : ''}><span class="wl-nm"><b>${esc(T.name)}</b><small>${open ? 'Open · claim it' : esc(mgrName(t))}</small></span>${open ? '<span class="wl-open">OPEN</span>' : '<span class="wl-lock">🔒</span>'}</button>`; };
+    return `<button class="wl-team${sel===t?' on':''}${c?' tc':''}" data-act="wPick" data-t="${t}"${c ? ` style="--tb:${c[0]};--tf:${c[1]}"` : ''}><span class="wl-nm"><b>${esc(T.name)}</b><small>${open ? 'Open · claim it' : 'Claimed'}</small></span>${open ? '<span class="wl-open">OPEN</span>' : '<span class="wl-lock">🔒</span>'}</button>`; };
   let form = '';
   if(sel && S.teams[sel]){
     const T = S.teams[sel];
@@ -1215,7 +1215,6 @@ function vWelcome(){
       if(!S.cp || S.cp.t !== sel) S.cp = {t:sel, bg:T.colors?.[0] || BG_COLS[0], fg:T.colors?.[1] || FG_COLS[0]};
       const nmv = S.wName ?? (/^Team #\d+$/.test(T.name) ? '' : T.name);
       form = `<div class="card stack wl-form"><h3>Claim ${esc(T.name)}</h3>
-        <label class="f">Your name<input type="text" id="wMgr" maxlength="28" value="${esc(S.wMgr ?? '')}" autocomplete="name"></label>
         <label class="f">Team name<input type="text" id="wName" maxlength="28" value="${esc(nmv)}"></label>
         <div><div class="eyebrow" style="margin-bottom:6px">Team colours</div>${colorPicker(S.cp.bg, S.cp.fg, nmv)}</div>
         <label class="f">Pick a 2-digit team code<input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="wCode" placeholder="••" autocomplete="off"></label>
@@ -1450,7 +1449,7 @@ function vStandings(){
   const c = cfg(), list = standings();
   if(!list.length) return emptyCard('No teams yet','The commissioner adds teams under Commissioner.');
   const rows = list.map((r,i) => `<tr class="${i===c.playoffTeams-1?'cut':''}${tc(r.id)}"${tcs(r.id)}><td class="dim">${i+1}</td>
-    <td><div class="st-tm"><div><b>${esc(tName(r.id))}</b><div class="sub">${esc(mgrName(r.id))}</div></div></div></td>
+    <td><div class="st-tm"><b>${esc(tName(r.id))}</b></div></td>
     <td class="r">${r.w}</td><td class="r">${r.l}</td><td class="r">${r.t}</td><td class="r">${r.pct.toFixed(3).replace(/^0/,'')}</td>
     <td class="r">${fmt(r.pf)}</td><td class="r hide-sm">${fmt(r.pa)}</td><td class="r hide-sm">${streak(r.res)}</td></tr>`).join('');
   const last = Math.min(c.currentWeek-1, c.regWeeks);
@@ -1494,7 +1493,7 @@ function vTeam(){
   const others = `<div class="tm-switch"><button class="btn sm ghost tm-other" data-act="teamMenu" aria-expanded="${!!S.teamMenu}">${mine || !mt ? 'View other teams' : 'Other teams'} <span aria-hidden="true">▾</span></button>
     ${S.teamMenu ? `<div class="tm-menu" role="menu">${ids.map(i => `<button role="menuitem" data-act="selTeam" data-t="${i}" aria-current="${i===tid}" class="${tc(i).trim()}"${tcs(i)}><span>${esc(tName(i))}</span><small>${esc(recStr(i)||'0-0')}${i===mt?' · you':''}</small></button>`).join('')}</div>` : ''}</div>`;
   const tcol = t.colors, banner = `<div class="tm-banner${tcol ? ' tc' : ''}"${tcol ? ` style="--band:${tcol[0]};--band-ink:${tcol[1]};--band-muted:color-mix(in srgb, ${tcol[1]} 72%, ${tcol[0]});--band2:color-mix(in srgb, ${tcol[1]} 14%, ${tcol[0]})"` : ''}>
-    <div class="tm-l">${!mine && mt ? `<button class="tm-back" data-act="selTeam" data-t="${mt}">‹ My team</button>` : ''}<div class="tm-name"><b>${esc(t.name)}${mine || isCommish() ? ` <button class="tm-edit" data-act="editTeam" data-t="${tid}" title="Edit name and colours" aria-label="Edit team">✎</button>` : ''}</b><span>${esc(mgrName(tid))} · ${esc(recStr(tid)||'0-0')} · ${place ? ordinal(place) : '–'} · ${fmt(r.pf)} PF</span></div></div>
+    <div class="tm-l">${!mine && mt ? `<button class="tm-back" data-act="selTeam" data-t="${mt}">‹ My team</button>` : ''}<div class="tm-name"><b>${esc(t.name)}${mine || isCommish() ? ` <button class="tm-edit" data-act="editTeam" data-t="${tid}" title="Edit name and colours" aria-label="Edit team">✎</button>` : ''}</b><span>${esc(recStr(tid)||'0-0')} · ${place ? ordinal(place) : '–'} · ${fmt(r.pf)} PF</span></div></div>
     <div class="tm-r">${mine && canSubmit && !submitted ? '<button class="tm-nosub" data-act="submitLineup" title="Your lineup for this week hasn’t been submitted. Click to submit it as it is.">⚠ Not submitted</button>' : mine && submitted ? '<span class="tm-sub">✓ Submitted</span>' : ''}${claim}${mt && addsOpen() && canWrite() ? `<button class="tm-prop" data-act="tradeOpen" data-t="${mine ? (S.tradeSel?.to && S.tradeSel.to !== mt ? S.tradeSel.to : teamIds().find(x => x !== mt)) : tid}">⇄ Propose trade</button>` : ''}${others}</div>
   </div>`;
   // this week's opponent(s) for a player
@@ -2046,7 +2045,7 @@ function vCommish(){
   const pv = S.preview;
   const teamRows = ids.map(t => { const T=S.teams[t]; const co = T.owner && c.commish.includes(T.owner);
     const claimed = !!(T.code || T.owner);
-    return `<tr class="${tc(t).trim()}"${tcs(t)}><td><b>${esc(T.name)}</b><div class="sub">${claimed ? esc(mgrName(t) === 'Unclaimed' ? 'Claimed' : mgrName(t)) : 'Open'}</div></td>
+    return `<tr class="${tc(t).trim()}"${tcs(t)}><td><b>${esc(T.name)}</b><div class="sub">${claimed ? 'Claimed' : 'Open'}</div></td>
       <td>${T.code ? 'Set' : '<span class="sub">None</span>'}</td><td class="r">${(T.roster||[]).length}</td>
       <td class="r" style="white-space:nowrap">${claimed ? `<button class="btn sm" data-act="codeOpen" data-t="${t}">Reset code</button> <button class="btn sm danger" data-act="releaseTeam" data-t="${t}">${S.confirm==='rel-'+t ? 'Confirm release' : 'Release'}</button>` : '<span class="sub">Waiting for a manager</span>'}
       ${T.owner?` <button class="btn sm ghost" data-act="coComm" data-t="${t}">${co?'Remove co-commish':'Co-commish'}</button>`:''}</td></tr>`; }).join('');
@@ -2709,7 +2708,7 @@ document.addEventListener('click', async e => {
     case 'tradeVeto': await resolveTrade(b.dataset.id, 'vetoed'); break;
     case 'wPick': S.wSel = b.dataset.t; S.wErr = false; S.wName = null; S.cp = null; render(); setTimeout(() => ($('#wName') || $('#wCode'))?.focus(), 0); break;
     case 'cpBg': case 'cpFg': { if(!S.cp) break; S.cp[a === 'cpBg' ? 'bg' : 'fg'] = b.dataset.c;
-      if($('#wName')) { S.wName = $('#wName').value; S.wMgr = $('#wMgr')?.value ?? S.wMgr; render(); }
+      if($('#wName')) { S.wName = $('#wName').value; render(); }
       else if($('#etName')) { S.etName = $('#etName').value; openEditTeam(S.editT); }
       break; }
     case 'editTeam': S.cp = null; S.etName = null; openEditTeam(b.dataset.t); break;
@@ -2737,8 +2736,7 @@ document.addEventListener('click', async e => {
     case 'wGo': enterSite(true); toast(`Welcome back, ${tName(myTeam())}`); break;
     case 'wOpen': e.preventDefault(); S.wSel = null; S.forceWelcome = true; render(); break;
     case 'wSwitch': e.preventDefault(); lsSet('nllTeam', null); lsSet('nllTeamCode', null); S.wSel = null; S.forceWelcome = true; render(); break;
-    case 'wClaim': { const t = S.wSel, mgr = ($('#wMgr')?.value || '').trim(), name = ($('#wName')?.value || '').trim(), code = ($('#wCode')?.value || '').trim(), pal = [S.cp?.bg || BG_COLS[0], S.cp?.fg || FG_COLS[0]];
-      if(!mgr) { toast('Add your name so the league knows who you are.', true); break; }
+    case 'wClaim': { const t = S.wSel, name = ($('#wName')?.value || '').trim(), code = ($('#wCode')?.value || '').trim(), pal = [S.cp?.bg || BG_COLS[0], S.cp?.fg || FG_COLS[0]];
       if(!name) { toast('Give your team a name.', true); break; }
       if(teamIds().some(x => x !== t && keyOf(S.teams[x].name) === keyOf(name))) { toast('Another team already has that name.', true); break; }
       if(!/^\d{2}$/.test(code)) { toast('The code must be exactly 2 numbers.', true); break; }
@@ -2746,7 +2744,7 @@ document.addEventListener('click', async e => {
       await run(async () => {
         const fresh = (await db.doc('teams/'+t).get()).data();
         if(fresh?.code || (fresh?.owner && fresh.owner !== S.me)) fail('Someone just claimed this team.');
-        await db.doc('teams/'+t).update({name, mgr, colors:pal, code:h, owner:S.me || null, claimed:Date.now()});
+        await db.doc('teams/'+t).update({name, colors:pal, code:h, owner:S.me || null, claimed:Date.now()});
         lsSet('nllTeam', t); lsSet('nllTeamCode', h);
       }, `Welcome, ${name}!`);
       if(lsGet('nllTeam') === t) enterSite(true); break; }
