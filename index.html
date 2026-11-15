@@ -1147,7 +1147,7 @@ const S = {
 let db = null, user = null, memo = {};
 const $ = s => document.querySelector(s);
 const cfg = () => mergeCfg(S.config);
-const VIEWS = [['matchups','Matchups'],['standings','Standings'],['team','My team'],['players','Players'],['draft','Draft'],['activity','Activity'],['rules','Rules'],['commish','Commissioner']];
+const VIEWS = [['draft','Draft'],['matchups','Matchups'],['standings','Standings'],['team','My team'],['players','Players'],['activity','Activity'],['rules','Rules'],['commish','Commissioner']];
 
 function teamIds(){ return Object.keys(S.teams).sort((a,b)=>((S.teams[a].order??99)-(S.teams[b].order??99)) || String(S.teams[a].name).localeCompare(S.teams[b].name)); }
 function tName(id){ return S.teams[id]?.name || '—'; }
