@@ -256,6 +256,9 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .board .c .tb{font-size:9px;padding:2px 3px}
 .board .rn{font-family:var(--f-display);font-weight:700;color:var(--muted);display:grid;place-items:center;font-size:14px}
 .dl-t thead th{position:sticky;top:0;z-index:1;background:var(--surface2)}
+.lastpk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;padding:6px 12px;margin-top:-6px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.lastpk .eyebrow{margin:0}
+.lastpk .lp-p{display:inline-flex;align-items:center;gap:6px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:16px}
 @media (max-width:820px){.two{grid-template-columns:minmax(0,1fr)}}
 
@@ -1177,6 +1180,11 @@ const teamDot = () => '';
 const tc = t => teamCol(t) ? ' tc' : '';
 const tcs = t => { const c = teamCol(t); return c ? ` style="--tb:${c[0]};--tf:${c[1]}"` : ''; };
 const tPill = t => { const c = teamCol(t); return `<span class="tpill"${c ? ` style="background:${c[0]};color:${c[1]}"` : ''}>${esc(tName(t))}</span>`; };
+function lastPickHtml(picks){
+  if(!picks || !picks.length) return '';
+  const x = picks[picks.length-1], P = pl(x.pid), c = teamCol(x.team);
+  return `<div class="lastpk"><span class="eyebrow">Last pick · #${picks.length}</span><span class="tpill"${c ? ` style="background:${c[0]};color:${c[1]}"` : ''}>${esc(tName(x.team))}</span><span class="lp-p">${posChip(P.pos)}<b data-sched="${esc(x.pid)}" data-kind="card">${esc(P.n)}</b>${teamBadge(P.t)}</span><span class="dim">${fmt(projOf(x.pid))} proj</span></div>`;
+}
 const bandVars = t => { const c = teamCol(t); return c ? ` style="--band:${c[0]};--band-ink:${c[1]};--band-muted:color-mix(in srgb, ${c[1]} 72%, ${c[0]});--band2:color-mix(in srgb, ${c[1]} 14%, ${c[0]})"` : ''; };
 const tBar = t => { const c = teamCol(t); return c ? `--tb:${c[0]};--tf:${c[1]}` : ''; };
 function colorPicker(bg, fg, name){
@@ -1858,6 +1866,7 @@ function vMock(){
       <div class="clock"${bandVars(team)}><div><small>Round ${r} of ${m.rounds}, pick ${i%n+1} · #${i+1} overall</small><div class="big">${teamDot(team,'lg')}${esc(tName(team))}</div></div><span class="spacer"></span>
         <span class="pill live">You’re on the clock</span>
         <button class="btn sm" data-act="mockAuto">Auto-pick for me</button><button class="btn sm" data-act="mockSim">Sim to the end</button></div>
+      ${lastPickHtml(m.picks)}
       <div class="two">
           <div class="card stack" style="gap:8px;align-self:start"><div class="row"><h3>Your team</h3><span class="spacer"></span><span class="sub">${mine.length}/${m.rounds} picked${nextMine>=0?` · next pick #${nextMine+1}`:''}</span></div>
             <div class="legend">Starters filled: ${need}</div>
@@ -1933,7 +1942,7 @@ function vDraft(){
         <div class="row"><input type="text" id="dq" placeholder="Search" value="${esc(S.dq)}" data-act="dq" style="flex:1 1 140px">${seg}</div>
         ${canPick?'':'<p class="sub" style="margin:0">You can pick when your team is on the clock.</p>'}</div>
         <p class="sub" style="margin:0 12px 8px">Hover or tap a player to see his schedule.</p><div class="tbl" id="dlist" style="max-height:440px;overflow:auto"></div></div>`;
-  return `<div class="stack"><h2>Draft</h2>${clock}
+  return `<div class="stack"><h2>Draft</h2>${clock}${lastPickHtml(byIdx)}
     ${mineCard ? `<div class="two">${mineCard}${avail}</div>` : avail}
     <div class="card flush"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, oc ? oc.i : -1, true, mt)}</div></div>
     ${mt ? slotTableHtml(byIdx.filter(x=>x.team===mt).map(x=>x.pid), 'Your lineup by week') : ''}</div>`;
