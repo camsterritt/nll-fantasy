@@ -1013,7 +1013,7 @@ const posChip = p => `<span class="pos p-${posKey(p)}">${posLab(p)}</span>`;
 const TEAMC = {BUF:['#FF671F','#111'], CGY:['#111','#EDC8A3'], COL:['#8A2432','#fff'], GA:['#0B2A5B','#FDB515'], HFX:['#582C83','#fff'],
   LV:['#111','#fff'], OSH:['#2AA9E0','#111'], ROC:['#0084A9','#fff'], SD:['#62269E','#FFB819'], SSK:['#70BF4A','#111'],
   TOR:['#FFCD00','#111'], VAN:['#B4A26A','#111']};
-const LOGO = {BUF:'svg', CGY:'svg', COL:'svg', GA:'png', HFX:'svg', LV:'svg', OSH:'svg', ROC:'svg', SD:'svg', SSK:'svg', TOR:'svg', VAN:'png'};
+const LOGO = {BUF:'svg', CGY:'svg', COL:'svg', GA:'png', HFX:'svg', LV:'svg', OSH:'svg', ROC:'svg', SD:'svg', SSK:'svg', TOR:'svg', VAN:'png', HOF:'png'};
 const teamBadge = t => {
   if(!t) return '';
   if(LOGO[t]) return `<img class="tl" src="logos/${t}.${LOGO[t]}" alt="${esc(t)}" title="${esc(t)}" width="22" height="22" loading="lazy">`;
@@ -1127,7 +1127,7 @@ function playerCardHtml(pid){
   }).join('');
   return `${head}${kpi}${line}<div><div class="eyebrow" style="margin-bottom:4px">Game log</div><table class="pc-log"><tbody>${games}</tbody></table></div>${nextUp(pid)}`;
 }
-const NLL_CITY = {BUF:'Buffalo',CGY:'Calgary',COL:'Colorado',GA:'Georgia',HFX:'Halifax',LV:'Las Vegas',OSH:'Oshawa',ROC:'Rochester',SD:'San Diego',SSK:'Saskatchewan',TOR:'Toronto',VAN:'Vancouver'};
+const NLL_CITY = {HOF:'Hall of Fame',BUF:'Buffalo',CGY:'Calgary',COL:'Colorado',GA:'Georgia',HFX:'Halifax',LV:'Las Vegas',OSH:'Oshawa',ROC:'Rochester',SD:'San Diego',SSK:'Saskatchewan',TOR:'Toronto',VAN:'Vancouver'};
 function nextUp(pid){
   const P = pl(pid), w0 = cfg().currentWeek, out = [];
   for(let fw = w0; fw < w0 + 4 && fw <= Math.min(maxWeek(), FW2NLL.length); fw++){
@@ -1250,6 +1250,14 @@ function ownerMap(){
   return memo.owner = m;
 }
 function pts(pid, w){ const s = S.stats[w]?.p?.[pid]; return s ? linePts(pl(pid).pos, s, cfg()) : null; }
+/* players the commissioner asked to add; written to the pool the next time the commissioner opens the site */
+const EXTRA_PLAYERS = {'chris-willman': {n:'Chris Willman', pos:'D', t:'HOF', proj:-25, added:'2026-11-15'}};
+async function seedExtraPlayers(){
+  if(S.extraSeeded || !isCommish() || !S.config || !db || !Object.keys(S.players).length) return;
+  const miss = Object.entries(EXTRA_PLAYERS).filter(([id]) => !S.players[id]); S.extraSeeded = true; if(!miss.length) return;
+  try { const d = (await db.doc('league/players').get()).data(); const p = d.p || {}; for(const [id, x] of miss) if(!p[id]) p[id] = x;
+    await db.doc('league/players').set(Object.assign({}, d, {p})); } catch(e){ console.error(e); S.extraSeeded = false; }
+}
 async function seedMgrNames(){
   if(S.mgrSeeded || !isCommish() || !S.config || !S.ready.teams || !teamIds().length || !db) return; S.mgrSeeded = true;
   const rules = [[/^teat/i, 'Cam'], [/^st\.?\s*kitts/i, 'John'], [/^kyle/i, 'Kyle']];
@@ -1373,7 +1381,7 @@ function render(){
   if(S.view==='players') renderPlayerList();
   if(S.view==='draft'){ renderDraftList(); renderMockList(); }
   renderGate();
-  seedMgrNames();
+  seedMgrNames(); seedExtraPlayers();
 }
 function renderGate(){
   const g = $('#gate'); if(!g) return;
