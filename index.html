@@ -1825,15 +1825,10 @@ function vMock(){
   const projected = Object.values(S.players).filter(p => p.proj != null).length;
   if(!projected) return emptyCard('No projections loaded', 'Load the player pool with 2027 projections to run a mock draft.');
   const order = S.draft?.order?.length ? S.draft.order : teamIds();
-  const sel = S.mockMe ?? (myTeam() || '');
+  const me = myTeam() && order.includes(myTeam()) ? myTeam() : '';
   const setup = `<div class="card stack"><div class="row"><h3>Mock draft</h3><span class="spacer"></span></div>
-    <p class="sub" style="margin:0">Pick a team to draft for yourself, or let every team draft automatically. The computer teams draft by 2027 projected points per game against a replacement-level starter, and fill 5 F, 4 D/T and 1 G before building the bench. Nothing is saved; it’s only on your screen.</p>
-    <div class="row">
-      <label class="f">You draft for<select id="mockMe" data-act="mockMe"><option value="">Nobody (watch it play out)</option>${order.map((t,i)=>`<option value="${t}" ${sel===t?'selected':''}>${esc(tName(t))} (pick ${i+1})</option>`).join('')}</select></label>
-      <label class="row" style="gap:6px;font-size:14px;align-self:flex-end;padding-bottom:7px"><input type="checkbox" id="mockVar" data-act="mockVar" ${S.mockVar?'checked':''}> Computer teams aren’t perfectly predictable</label>
-      <span class="spacer"></span>
-      <button class="btn primary" data-act="runMock" style="align-self:flex-end">${S.mock ? 'Start a new mock' : 'Start mock draft'}</button>
-    </div></div>`;
+    <p class="sub" style="margin:0">${me ? `You draft for <b>${esc(tName(me))}</b> (pick ${order.indexOf(me)+1}); every other team drafts automatically.` : 'You haven’t picked a team, so every team drafts automatically.'} Computer teams draft by 2027 projected points per game against a replacement-level starter, fill 5 F, 4 D/T and 1 G before building the bench, and mix in a little unpredictability like real managers. Nothing is saved; it’s only on your screen.</p>
+    <div class="row"><button class="btn primary" data-act="runMock">${S.mock ? 'Start a new mock' : 'Start mock draft'}</button></div></div>`;
   if(!S.mock) return setup;
   const m = S.mock, done = mockDone(m), n = m.order.length;
   if(!done){
@@ -2762,7 +2757,7 @@ document.addEventListener('click', async e => {
     case 'slotPick': closeModal(); await setSlot(b.dataset.k, +b.dataset.i, b.dataset.p || null); break;
     case 'filt': S[b.dataset.f] = b.dataset.v; S.limit = 100; render(); break;
     case 'dfilt': S.dpos = b.dataset.v; render(); break;
-    case 'runMock': mockStart(S.mockMe ?? (myTeam() || ''), S.mockVar); render(); break;
+    case 'runMock': { const o = S.draft?.order?.length ? S.draft.order : teamIds(), me = myTeam(); mockStart(me && o.includes(me) ? me : '', true); render(); break; }
     case 'mockPick': mockUserPick(b.dataset.p); render(); break;
     case 'mockAuto': mockAutoMine(); render(); break;
     case 'mockSim': mockSimRest(); render(); break;
