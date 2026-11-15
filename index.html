@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { initializeFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, limit, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { initializeFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, limit, getDocs, addDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 const app = initializeApp({"apiKey": "AIzaSyCuSv7YX5NzzynbXz0Rvbps1J2xSk1uYV8", "authDomain": "nll-fantasy.firebaseapp.com", "projectId": "nll-fantasy", "storageBucket": "nll-fantasy.firebasestorage.app", "messagingSenderId": "395925533928", "appId": "1:395925533928:web:1fe4a539c618eb8c8c455d"});
 const fs = initializeFirestore(app, {ignoreUndefinedProperties:true});
 const clean = o => JSON.parse(JSON.stringify(o));
@@ -17,7 +17,10 @@ function D(path){ const r = doc(fs, path); return { path,
   set: async d => { await setDoc(r, clean(d)); },
   update: async d => { try { await updateDoc(r, clean(d)); } catch(e){ if(e.code === 'not-found') await setDoc(r, clean(d), {merge:true}); else throw e; } },
   delete: async () => { await deleteDoc(r); },
-  onSnapshot: (n, err) => onSnapshot(r, s => n(wrapD(s)), err) }; }
+  onSnapshot: (n, err) => onSnapshot(r, s => n(wrapD(s)), err),
+  acquire: ({holder, ttlMs}) => runTransaction(fs, async tx => { const s = await tx.get(r), d = s.exists() ? s.data() : null, now = Date.now();
+    if(d && d.holder !== holder && d.until > now) return {acquired:false}; tx.set(r, {holder, until: now + (ttlMs || 8000)}); return {acquired:true}; }),
+  release: ({holder}) => runTransaction(fs, async tx => { const s = await tx.get(r); if(s.exists() && s.data().holder === holder) tx.delete(r); }) }; }
 function C(path, cons=[]){ const q = () => cons.length ? query(collection(fs, path), ...cons) : collection(fs, path);
   return { orderBy: (f, d) => C(path, [...cons, orderBy(f, d || 'asc')]), limit: n => C(path, [...cons, limit(n)]),
     get: async () => wrapQ(await getDocs(q())), onSnapshot: (n, err) => onSnapshot(q(), s => n(wrapQ(s)), err),
@@ -2188,7 +2191,7 @@ async function withLock(fn){
   const ref = db.doc('locks/moves'); const holder = S.me || ('v-'+Math.random().toString(36).slice(2));
   for(let i=0;i<10;i++){
     const r = await ref.acquire({holder, ttlMs:8000});
-    if(r.acquired) return await fn();
+    if(r.acquired){ try { return await fn(); } finally { if(window.__FB && ref.release) ref.release({holder}).catch(()=>{}); } }
     await sleep(500 + Math.random()*500);
   }
   fail('Another move is in progress. Try again in a few seconds.');
