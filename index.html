@@ -2119,6 +2119,10 @@ function vCommish(){
       return list.length ? `<div class="tbl"><table><thead><tr><th>Player</th><th>NLL list</th><th>Since</th><th>Fantasy team</th></tr></thead><tbody>${list.map(([pid,x])=>`<tr><td><div class="pname">${posChip(pl(pid).pos)}<b>${esc(pl(pid).n)}</b>${teamBadge(pl(pid).t)}</div></td><td>${esc(x.list)}</td><td class="dim">${esc(x.date)}</td><td>${own[pid]?esc(tName(own[pid])):'<span class="pill">FA</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="sub" style="margin:0">No injured players right now.</p>'; })()}
   </div>
 
+  <div class="card stack"><h3>Start the league over</h3>
+    <p class="sub" style="margin:0">Puts the league back to day one: every team becomes Team #1–#8 with no manager, name, colours, code or roster; the draft goes back to setup; lineups, trades, stats and fantasy activity are deleted; the season goes back to Week 1. The player pool, schedule, settings, NLL moves and your commissioner code stay.</p>
+    <div><button class="btn danger" data-act="resetLeague">${S.confirm==='resetLeague'?'Confirm: wipe everything and start over':'Reset the league'}</button></div></div>
+
   <div class="card stack"><h3>Test rosters</h3>
     <p class="sub" style="margin:0">Empties every fantasy team’s roster and IR. Use it after testing with a loaded mock draft, before the real draft. Lineups saved during testing are removed too.</p>
     <div><button class="btn danger" data-act="clearRosters">${S.confirm==='clearRosters'?'Confirm: empty all rosters':'Clear all rosters'}</button></div></div>
@@ -2337,7 +2341,7 @@ async function applyNll(){
 
 
 /* ---- trades between fantasy teams ---- */
-function tradeSide(ids){ return ids.map(p => `<span class="trd-p">${posChip(pl(p).pos)}<b data-sched="${esc(p)}" data-kind="card">${esc(pl(p).n)}</b>${teamBadge(pl(p).t)}</span>`).join(''); }
+function tradeSide(ids){ return (ids||[]).map(p => `<span class="trd-p">${posChip(pl(p).pos)}<b data-sched="${esc(p)}" data-kind="card">${esc(pl(p).n)}</b>${teamBadge(pl(p).t)}</span>`).join(''); }
 function tradeRow(x, tid){
   const incoming = x.to === tid, other = incoming ? x.from : x.to;
   const iGet = incoming ? x.give : x.get, iGive = incoming ? x.get : x.give;
@@ -2676,7 +2680,7 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if(!b || b.tagName==='SELECT' || b.tagName==='INPUT') return;
   const a = b.dataset.act, c = cfg();
   const confirmStep = key => { if(S.confirm === key){ S.confirm = null; return true; } S.confirm = key; render(); return false; };
-  if(a!=='drop' && a!=='pick' && a!=='genSched' && a!=='resetDraft' && a!=='clearStats' && a!=='loadMock' && a!=='clearRosters' && a!=='releaseTeam') S.confirm = null;
+  if(a!=='drop' && a!=='pick' && a!=='genSched' && a!=='resetDraft' && a!=='clearStats' && a!=='loadMock' && a!=='clearRosters' && a!=='releaseTeam' && a!=='resetLeague') S.confirm = null;
   switch(a){
     case 'wk': S.week = Math.max(1, Math.min(maxWeek(), S.week + (+b.dataset.d))); S.openMatch = null; render(); break;
     case 'openMatch': S.openMatch = +b.dataset.i; render(); break;
@@ -2840,6 +2844,19 @@ document.addEventListener('click', async e => {
         for(const t of teamIds()) await db.doc('teams/'+t).update({roster: by[t] || [], ir: []});
         await logTx({type:'commish', text:'Commissioner loaded mock draft rosters for testing'});
       }), 'Mock rosters loaded. Check the Teams page'); break;
+    case 'resetLeague': if(confirmStep('resetLeague')) await run(async () => {
+        const NLL_ONLY = new Set(['nllteam','nlladd','newplayer']);
+        const ids = teamIds();
+        for(let i = 0; i < ids.length; i++){ const t = ids[i], o = S.teams[t].order || i+1;
+          await db.doc('teams/'+t).set({name:'Team #'+o, order:o, owner:null, roster:[], ir:[]}); }
+        for(const id of Object.keys(S.lineups)) await db.doc('lineups/'+id).delete();
+        for(const x of S.trades || []) await db.doc('trades/'+x.id).delete();
+        for(const w of Object.keys(S.stats)) await db.doc('stats/w'+w).delete();
+        for(const x of S.tx || []) if(!NLL_ONLY.has(x.type)) await db.doc('transactions/'+x.id).delete();
+        await db.doc('draft/state').set({order:S.draft?.order || ids, rounds:c.rosterMax, picks:[], status:'setup'});
+        await db.doc('league/config').update({currentWeek:1, locked:false});
+        lsSet('nllTeam', null); lsSet('nllTeamCode', null); S.mock = null;
+      }, 'League reset to day one'); break;
     case 'clearRosters': if(confirmStep('clearRosters')) await run(() => withLock(async () => {
         for(const t of teamIds()) await db.doc('teams/'+t).update({roster: [], ir: []});
         for(const id of Object.keys(S.lineups)) await db.doc('lineups/'+id).delete();
