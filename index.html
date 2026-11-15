@@ -1210,8 +1210,8 @@ function vWelcome(){
       if(!S.cp || S.cp.t !== sel) S.cp = {t:sel, bg:T.colors?.[0] || BG_COLS[0], fg:T.colors?.[1] || FG_COLS[0]};
       const nmv = S.wName ?? (/^Team #\d+$/.test(T.name) ? '' : T.name);
       form = `<div class="card stack wl-form"><h3>Claim ${esc(T.name)}</h3>
-        <label class="f">Your name<input type="text" id="wMgr" maxlength="28" value="${esc(S.wMgr ?? '')}" placeholder="e.g. Cam Sterritt" autocomplete="name"></label>
-        <label class="f">Team name<input type="text" id="wName" maxlength="28" value="${esc(nmv)}" placeholder="e.g. Sterritt's Snipers"></label>
+        <label class="f">Your name<input type="text" id="wMgr" maxlength="28" value="${esc(S.wMgr ?? '')}" autocomplete="name"></label>
+        <label class="f">Team name<input type="text" id="wName" maxlength="28" value="${esc(nmv)}"></label>
         <div><div class="eyebrow" style="margin-bottom:6px">Team colours</div>${colorPicker(S.cp.bg, S.cp.fg, nmv)}</div>
         <label class="f">Pick a 2-digit team code<input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="wCode" placeholder="••" autocomplete="off"></label>
         <p class="sub" style="margin:0">You’ll use this code to get back into your team on another device. Keep it to yourself.</p>
