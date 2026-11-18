@@ -256,6 +256,13 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .board .c .tb{font-size:9px;padding:2px 3px}
 .board .rn{font-family:var(--f-display);font-weight:700;color:var(--muted);display:grid;place-items:center;font-size:14px}
 .dl-t thead th{position:sticky;top:0;z-index:1;background:var(--surface2)}
+.dl-t{width:100%;table-layout:fixed}
+.dl-t th:nth-child(2),.dl-t td:nth-child(2){width:118px;white-space:nowrap}
+.dl-t th:nth-child(3),.dl-t td:nth-child(3){width:84px;white-space:nowrap}
+.dl-t td:first-child{overflow:hidden}
+.dl-t .pname{min-width:0;overflow:hidden}
+.dl-t .pname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+@media (max-width:560px){.dl-t th:nth-child(2),.dl-t td:nth-child(2){width:64px}.dl-t td:nth-child(2) .dim,.dl-t th:nth-child(2) .dim{display:none}.dl-t th:nth-child(3),.dl-t td:nth-child(3){width:78px}.dl-t td,.dl-t th{padding-left:6px;padding-right:6px}.dl-t .pill.rook{display:none}}
 .lastpk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;padding:6px 12px;margin-top:-6px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
 .lastpk .eyebrow{margin:0}
 .lastpk .lp-p{display:inline-flex;align-items:center;gap:6px}
