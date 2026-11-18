@@ -2542,6 +2542,7 @@ async function draftPick(pid){
   }), `Drafted ${pl(pid).n}`);
 }
 async function undoPick(){
+  if(!isCommish()) return toast('Only the commissioner can undo a pick.', true);
   await run(() => withLock(async () => {
     const d = clone((await db.doc('draft/state').get()).data());
     const last = d?.picks?.[d.picks.length-1]; if(!last) return;
