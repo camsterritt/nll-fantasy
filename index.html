@@ -2227,8 +2227,9 @@ function vCommish(){
     </div></div>
 
   ${S.rebuild ? `<div class="card stack" style="border-color:var(--accent)"><h3>Rebuild preview</h3>
-    <p class="sub" style="margin:0">From the pick log: <b>${S.rebuild.picks.length} picks</b> (the board currently shows ${S.rebuild.was}). Applying sets the board to these picks and rebuilds every roster from them.</p>
-    ${S.rebuild.lost.length ? `<div class="note">Drafted earlier but not in these picks (they'd go back to the player pool): ${S.rebuild.lost.map(p => '<b>'+esc(pl(p).n)+'</b>').join(', ')}</div>` : ''}
+    <label class="row" style="gap:8px;font-size:14px">Keep picks 1 to <input type="number" id="rbKeep" data-act="rbKeep" min="0" max="${S.rebuild.all.length}" value="${S.rebuild.keep}" style="width:80px"> <span class="sub">of ${S.rebuild.all.length} in the log</span></label>
+    <p class="sub" style="margin:0">Keeping <b>${S.rebuild.picks.length} picks</b> (the board currently shows ${S.rebuild.was}). Applying sets the board to these picks and rebuilds every roster from them.</p>
+    ${S.rebuild.lost.length ? `<div class="note">Drafted at some point but not in these picks, so they go back to the player pool and can be drafted again: ${S.rebuild.lost.map(p => '<b>'+esc(pl(p).n)+'</b>').join(', ')}</div>` : ''}
     <div class="tbl" style="max-height:320px;overflow:auto"><table><tbody>${S.rebuild.picks.map((x,k) => `<tr><td class="dim">#${k+1}</td><td>${tPill(x.team)}</td><td><div class="pname">${posChip(pl(x.pid).pos)}<b>${esc(pl(x.pid).n)}</b>${teamBadge(pl(x.pid).t)}${x.auto ? '<span class="pill">Auto</span>' : ''}</div></td></tr>`).join('')}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="rebuildApply">Apply: set the board to these ${S.rebuild.picks.length} picks</button><button class="btn ghost" data-act="rebuildCancel">Cancel</button></div></div>` : ''}
 
@@ -2605,10 +2606,13 @@ async function rebuildPreview(){
     // keep any pick already on the board beyond what the log covers
     for(let k = picks.length; k < (d.picks||[]).length; k++){ const x = d.picks[k]; if(picks.some(p => p.pid === x.pid)) break; picks.push(x); }
     const inPicks = new Set(picks.map(x => x.pid));
-    S.rebuild = {picks, was:(d.picks||[]).length, lost:[...seen.keys()].filter(p => !inPicks.has(p))};
+    S.rebuild = {all:picks, picks, keep:picks.length, was:(d.picks||[]).length, logged:[...seen.keys()]};
+    rebuildCut(picks.length);
   });
   render();
 }
+function rebuildCut(k){ const rb = S.rebuild; if(!rb) return; rb.keep = Math.max(0, Math.min(rb.all.length, k|0)); rb.picks = rb.all.slice(0, rb.keep);
+  const inPicks = new Set(rb.picks.map(x => x.pid)); rb.lost = rb.logged.filter(p => !inPicks.has(p)); }
 async function rebuildApply(){
   const rb = S.rebuild; if(!rb) return;
   await run(() => txn(async tx => {
@@ -3107,6 +3111,7 @@ document.addEventListener('change', async e => {
   if(a === 'setSlot') await setSlot(el.dataset.k, +el.dataset.i, el.value);
 
   else if(a === 'mockVar'){ S.mockVar = el.checked; }
+  else if(a === 'rbKeep'){ rebuildCut(+el.value); setTimeout(render, 0); }
   else if(a === 'pickSecs'){ const v = +el.value; await run(() => db.doc('draft/state').update(Object.assign({pickSecs:v}, S.draft?.status === 'live' ? {clockStart:Date.now()} : {})), v ? `Pick clock set to ${clockTxt(v)}` : 'Pick clock off'); }
   else if(a === 'mockMe'){ S.mockMe = el.value; }
   else if(a === 'statWeek'){ S.statWeek = +el.value; S.preview = null; render(); }
