@@ -268,6 +268,13 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .dcount-w{font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
 .dcount{font-family:var(--f-display);font-size:38px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .gate-m .dcount-c{padding:10px 14px}.gate-m .dcount{font-size:28px}.gate-m .dcount-w{font-size:16px}
+.adraft{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2)}
+.adraft.on{border-color:var(--accent);background:var(--accent-soft)}
+.adraft .sub{font-size:12px;margin-top:2px}
+.adr-t{flex:none;width:46px;height:26px;border-radius:999px;border:0;padding:3px;cursor:pointer;background:#9CA3AF;display:flex;transition:background .15s}
+.adr-k{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+.adraft.on .adr-t{background:var(--accent)}
+.adraft.on .adr-k{transform:translateX(20px)}
 .pclock{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;padding:4px 12px;border-radius:8px;background:var(--band2);color:var(--band-ink);min-width:72px;text-align:center}
 .pclock.low{background:#DC2626;color:#fff;animation:pcpulse 1s ease-in-out infinite}
 @keyframes pcpulse{50%{opacity:.75}}
@@ -1972,7 +1979,7 @@ function vDraft(){
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
   const c = cfg(), total = n * d.rounds;
   const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>Round ${oc.round} of ${d.rounds}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${esc(tName(oc.team))}</div></div><span class="spacer"></span>
-      ${pickSecs(d) ? `<span class="pclock${(clockLeft(d)??99) <= 20 ? ' low' : ''}" title="Time left for this pick">${clockTxt(clockLeft(d))}</span>` : ''}${oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
+      ${pickSecs(d) ? `<span class="pclock${(clockLeft(d)??99) <= 20 ? ' low' : ''}" title="Time left for this pick">${clockTxt(clockLeft(d))}</span>` : ''}${d.autoTeams?.[oc.team] ? '<span class="pill live">Auto-drafting…</span>' : oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
     : `<div class="clock"><div><small>Draft complete</small><div class="big">${byIdx.length} players drafted</div></div><span class="spacer"></span>${isCommish()&&d.status!=='done'?'<button class="btn sm primary" data-act="finishDraft">Close the draft</button>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`;
   const seg = `<div class="seg" role="group">${[['all','Players'],['F','F'],['DT','D/T'],['G','Goalies']].map(([v,l])=>`<button data-act="dfilt" data-v="${v}" aria-pressed="${S.dpos===v}">${l}</button>`).join('')}</div>`;
   const teamAt = i => { const r = Math.floor(i/n), k = i % n; return d.order[r % 2 ? n-1-k : k]; };
@@ -1982,7 +1989,9 @@ function vDraft(){
     const cnt = {F:0, DT:0, G:0}; mine.forEach(p => cnt[posKey(pl(p).pos)]++);
     const need = ['F','DT','G'].map(s => `${posChip(s==='DT'?'D':s)} ${Math.min(cnt[s], c.slots[s])}/${c.slots[s]}`).join(' &nbsp; ');
     let nextMine = -1; for(let k = byIdx.length + (oc && oc.team===mt ? 1 : 0); k < total; k++) if(teamAt(k)===mt){ nextMine = k; break; }
+    const aOn = !!d.autoTeams?.[mt];
     mineCard = `<div class="card stack" style="gap:8px;align-self:start"><div class="row"><h3>Your team</h3><span class="spacer"></span><span class="sub">${mine.length}/${d.rounds} picked${nextMine>=0?` · next pick #${nextMine+1}`:''}</span></div>
+      ${d.status === 'live' ? `<div class="adraft${aOn ? ' on' : ''}"><button class="adr-t" data-act="autoDraft" data-t="${mt}" role="switch" aria-checked="${aOn}"><span class="adr-k"></span></button><div><b>Auto-draft ${aOn ? 'on' : 'off'}</b><div class="sub">${aOn ? 'Your picks are made instantly with the best available player. Turn it off to pick yourself again.' : 'Leaving early? Turn this on and your picks are made instantly with the best available player.'}</div></div></div>` : ''}
       <div class="legend">Starters filled: ${need}</div>
       ${mine.length ? `<div class="chips">${mine.map(p=>`<span class="chip" style="cursor:default;display:inline-flex;gap:6px;align-items:center">${posChip(pl(p).pos)}${esc(pl(p).n)}${teamBadge(pl(p).t)} <span class="dim">${fmt(projOf(p))}</span></span>`).join('')}</div>` : '<p class="sub" style="margin:0">No picks yet.</p>'}</div>`;
   }
@@ -1990,7 +1999,8 @@ function vDraft(){
         <div class="row"><input type="text" id="dq" placeholder="Search" value="${esc(S.dq)}" data-act="dq" style="flex:1 1 140px">${seg}</div>
         ${canPick?'':'<p class="sub" style="margin:0">You can pick when your team is on the clock.</p>'}</div>
         <p class="sub" style="margin:0 12px 8px">Hover or tap a player to see his schedule.</p><div class="tbl" id="dlist" style="max-height:440px;overflow:auto"></div></div>`;
-  return `<div class="stack"><h2>Draft</h2>${clock}${lastPickHtml(byIdx)}
+  const autoList = d.status === 'live' ? (d.order||[]).filter(t => d.autoTeams?.[t]) : [];
+  return `<div class="stack"><h2>Draft</h2>${clock}${lastPickHtml(byIdx)}${autoList.length ? `<div class="sub" style="margin-top:-6px">On auto-draft: ${autoList.map(t => esc(tName(t))).join(', ')}</div>` : ''}
     ${mineCard ? `<div class="two">${mineCard}${avail}</div>` : avail}
     <div class="card flush"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, oc ? oc.i : -1, true, mt)}</div></div>
     ${mt ? slotTableHtml(byIdx.filter(x=>x.team===mt).map(x=>x.pid), 'Your lineup by week') : ''}</div>`;
@@ -2203,7 +2213,7 @@ function vCommish(){
 
   <div class="card stack"><h3>Draft</h3>
     <p class="sub" style="margin:0">Snake draft, ${c.rosterMax} rounds. Status: <b>${esc(d?.status||'not set up')}</b>${d?.picks?.length?` · ${d.picks.length} picks made`:''}.</p>
-    <ol style="margin:0;padding-left:22px">${order.map((t,i)=>`<li style="padding:2px 0">${esc(tName(t))} ${d?.status==='live'?'':`<button class="btn sm ghost" data-act="ordUp" data-i="${i}" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="btn sm ghost" data-act="ordDown" data-i="${i}" aria-label="Move down" ${i===order.length-1?'disabled':''}>↓</button>`}</li>`).join('')}</ol>
+    <ol style="margin:0;padding-left:22px">${order.map((t,i)=>`<li style="padding:2px 0">${esc(tName(t))} ${d?.status==='live'?`<button class="btn sm ${d.autoTeams?.[t]?'primary':'ghost'}" data-act="autoDraft" data-t="${t}">${d.autoTeams?.[t]?'Auto-draft on':'Auto-draft off'}</button>`:`<button class="btn sm ghost" data-act="ordUp" data-i="${i}" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="btn sm ghost" data-act="ordDown" data-i="${i}" aria-label="Move down" ${i===order.length-1?'disabled':''}>↓</button>`}</li>`).join('')}</ol>
     <div class="row">
       ${d?.status==='live'?'':`<button class="btn" data-act="shuffle">Randomize order</button><button class="btn primary" data-act="startDraft">${d?.picks?.length?'Resume draft':'Start draft'}</button>`}
       ${d?.status==='live'?`<button class="btn" data-act="pauseDraft">Pause draft</button>`:''}
@@ -2566,12 +2576,16 @@ const pickSecs = d => d?.pickSecs ?? 120;
 function clockLeft(d){ if(!d || d.status !== 'live' || !pickSecs(d) || !d.clockStart) return null; return Math.ceil((d.clockStart + pickSecs(d)*1000 - Date.now())/1000); }
 const clockTxt = sec => sec == null ? '' : sec <= 0 ? '0:00' : `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
 function autoChoice(d, team){
-  const c = cfg(), taken = new Set((d.picks||[]).map(x => x.pid)), own = ownerMap();
-  const mine = (d.picks||[]).filter(x => x.team === team).map(x => x.pid), cnt = {F:0, DT:0, G:0};
-  mine.forEach(p => cnt[slotOf(pl(p).pos)]++);
-  const left = d.rounds - mine.length, unmet = Math.max(0,c.slots.F-cnt.F) + Math.max(0,c.slots.DT-cnt.DT) + Math.max(0,c.slots.G-cnt.G);
-  const pool = Object.keys(S.players).filter(p => !taken.has(p) && !own[p] && pl(p).t && projOf(p) != null && !nllInj(p)).sort((a,b) => projOf(b) - projOf(a));
-  return pool.find(p => { const sl = slotOf(pl(p).pos); if(sl === 'G' && cnt.G >= 2) return false; if(left <= unmet && cnt[sl] >= c.slots[sl]) return false; return true; }) || pool[0];
+  // same thinking as the mock draft's computer teams: value over a replacement-level starter, starters before bench, at most two goalies
+  const c = cfg(), n = d.order.length, taken = new Set((d.picks||[]).map(x => x.pid)), own = ownerMap();
+  const all = Object.keys(S.players).filter(p => projOf(p) != null && pl(p).t);
+  const need = {F:c.slots.F*n, DT:c.slots.DT*n, G:c.slots.G*n}, repl = {};
+  for(const sl of ['F','DT','G']){ const a = all.filter(p => slotOf(pl(p).pos)===sl).map(projOf).sort((x,y)=>y-x); repl[sl] = a[need[sl]] ?? 0; }
+  const T = {[team]: {F:0, DT:0, G:0, n:0}};
+  (d.picks||[]).filter(x => x.team === team).forEach(x => { T[team][slotOf(pl(x.pid).pos)]++; T[team].n++; });
+  const avail = new Set(all.filter(p => !taken.has(p) && !own[p] && !nllInj(p)));
+  const best = mockScored({T, rounds:d.rounds, repl, avail}, team)[0];
+  return best ? best[1] : [...avail].sort((a,b) => projOf(b) - projOf(a))[0];
 }
 async function autoPick(idx){
   if(S.autoBusy) return; S.autoBusy = true;
@@ -2579,15 +2593,15 @@ async function autoPick(idx){
     await withLock(async () => {
       const d = clone((await db.doc('draft/state').get()).data());
       if(!d || d.status !== 'live' || (d.picks||[]).length !== idx) return;
-      const lft = clockLeft(d); if(lft == null || lft > 0) return;
       const oc = onClock(d); if(!oc) return;
+      const lft = clockLeft(d); if(!d.autoTeams?.[oc.team] && (lft == null || lft > 0)) return;
       const pid = autoChoice(d, oc.team); if(!pid) return;
       const T = await freshTeams(); if(freshOwner(T)[pid]) return;
       d.picks = [...(d.picks||[]), {pid, team:oc.team, auto:true}];
       await db.doc('draft/state').update({picks:d.picks, status: onClock(d) ? 'live' : 'done', clockStart:Date.now()});
       await db.doc('teams/'+oc.team).update({roster:[...(T[oc.team].roster||[]), pid]});
       await logTx({type:'draft', team:oc.team, pid, pick:oc.i+1, auto:true});
-      toast(`Time ran out: ${tName(oc.team)} auto-drafted ${pl(pid).n}`);
+      toast(d.autoTeams?.[oc.team] ? `${tName(oc.team)} (auto-draft) took ${pl(pid).n}` : `Time ran out: ${tName(oc.team)} auto-drafted ${pl(pid).n}`);
     });
   } catch(e){ console.error(e); } finally { S.autoBusy = false; }
 }
@@ -2595,7 +2609,9 @@ setInterval(() => {
   const d = S.draft, sec = clockLeft(d);
   document.querySelectorAll('.dcount').forEach(el => { el.textContent = dcountTxt(); });
   document.querySelectorAll('.pclock').forEach(el => { el.textContent = clockTxt(sec); el.classList.toggle('low', sec != null && sec <= 20); });
-  if(sec == null || !db || !onClock(d)) return;
+  const ocT = onClock(d);
+  if(d?.status === 'live' && ocT && d.autoTeams?.[ocT.team] && db && canWrite() && Date.now() - (d.clockStart||0) > 1500) { autoPick((d.picks||[]).length); return; }
+  if(sec == null || !db || !ocT) return;
   // devices' clocks can differ: the commissioner's screen re-times each new pick by its own clock if the start looks off by more than 5 seconds
   const n = (d.picks||[]).length;
   if(isCommish() && S.clkIdx !== n){ S.clkIdx = n; if(Math.abs(Date.now() - d.clockStart) > 5000 && Date.now() - (S.clkSeen||0) < 4000) { db.doc('draft/state').update({clockStart:Date.now()}).catch(()=>{}); return; } }
@@ -2914,6 +2930,8 @@ document.addEventListener('click', async e => {
       }, `You manage ${tName(b.dataset.t)}`); break;
     case 'pick': if(S.confirm==='pick:'+b.dataset.p){ S.confirm=null; await draftPick(b.dataset.p); } else { S.confirm='pick:'+b.dataset.p; renderDraftList(); } break;
     case 'undoPick': await undoPick(); break;
+    case 'autoDraft': { const t = b.dataset.t; if(t !== myTeam() && !isCommish()) break; const on = !S.draft?.autoTeams?.[t];
+      await run(() => db.doc('draft/state').update({autoTeams: Object.assign({}, S.draft?.autoTeams || {}, {[t]: on})}), on ? `Auto-draft on for ${tName(t)}` : `Auto-draft off for ${tName(t)}`); break; }
     case 'finishDraft': await run(()=>db.doc('draft/state').update({status:'done'}), 'Draft closed'); break;
     case 'initLeague': await run(async () => { await db.doc('league/config').set(clone(DEF)); }, 'League created'); break;
     case 'lockWeek': await run(async () => {
