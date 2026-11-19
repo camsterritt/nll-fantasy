@@ -263,6 +263,11 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .dl-t .pname{min-width:0;overflow:hidden}
 .dl-t .pname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 @media (max-width:560px){.dl-t th:nth-child(2),.dl-t td:nth-child(2){width:64px}.dl-t td:nth-child(2) .dim,.dl-t th:nth-child(2) .dim{display:none}.dl-t th:nth-child(3),.dl-t td:nth-child(3){width:78px}.dl-t td,.dl-t th{padding-left:6px;padding-right:6px}.dl-t .pill.rook{display:none}}
+.dcount-c{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--band);color:var(--band-ink);border-radius:10px;padding:14px 18px;box-shadow:inset 0 -3px 0 var(--accent)}
+.dcount-c .eyebrow{color:var(--accent);margin:0}
+.dcount-w{font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.dcount{font-family:var(--f-display);font-size:38px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.gate-m .dcount-c{padding:10px 14px}.gate-m .dcount{font-size:28px}.gate-m .dcount-w{font-size:16px}
 .pclock{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;padding:4px 12px;border-radius:8px;background:var(--band2);color:var(--band-ink);min-width:72px;text-align:center}
 .pclock.low{background:#DC2626;color:#fff;animation:pcpulse 1s ease-in-out infinite}
 @keyframes pcpulse{50%{opacity:.75}}
@@ -1269,7 +1274,7 @@ function vWelcome(){
   }
   const mt = S.forceWelcome ? null : myTeam(), mc = mt && teamCol(mt);
   const cont = mt && !sel ? `<button class="wl-cont" data-act="wGo" style="${mc ? `background:${mc[0]};color:${mc[1]}` : ''}"><span class="wl-nm"><small>Continue as</small><b>${esc(tName(mt))}</b></span><span class="wl-arrow" aria-hidden="true">→</span></button>` : '';
-  return `<div class="wl"><div class="wl-head"><div class="eyebrow">${esc(cfg().name)}</div><h2>${mt && !sel ? 'Welcome back' : 'Pick your team'}</h2>${mt && !sel ? '' : '<p class="sub">Open teams are free to claim: give it a name, colours and a 2-digit code.</p>'}</div>
+  return `<div class="wl"><div class="wl-head"><div class="eyebrow">${esc(cfg().name)}</div><h2>${mt && !sel ? 'Welcome back' : 'Pick your team'}</h2>${mt && !sel ? '' : '<p class="sub">Open teams are free to claim: give it a name, colours and a 2-digit code.</p>'}</div>${sel ? '' : draftCountHtml()}
     ${cont}${mt && !sel ? '<div class="wl-or">or pick another team</div>' : ''}
     <div class="wl-grid${mt && !sel ? ' small' : ''}">${ids.map(card).join('')}</div>${form}
     ${window.__FB && S.cmOpen ? `<div class="card stack wl-form"><h3>Commissioner sign-in</h3><label class="f">Commissioner code<input type="password" inputmode="numeric" maxlength="8" id="cmCode" placeholder="••••" autocomplete="off"></label>${S.cmErr ? '<div class="note" style="color:var(--loss)">That code isn’t right.</div>' : ''}<div class="row"><button class="btn primary" data-act="cmSignIn">Sign in</button><button class="btn ghost" data-act="cmToggle">Cancel</button></div></div>` : ''}
@@ -1957,7 +1962,7 @@ function renderMockList(){
 function vDraft(){
   const d = S.draft, ids = teamIds();
   if(!d || !d.order || d.status==='setup' || !d.status){
-    return `<div class="stack"><h2>Draft</h2>
+    return `<div class="stack"><h2>Draft</h2>${draftCountHtml()}
       <div class="note">The real draft hasn’t started. ${isCommish() ? 'Set the order and start it under Commissioner → Draft.' : 'The commissioner will open the draft room here.'} Meanwhile, run a mock draft below to see how it could play out.</div>
       ${vMock()}</div>`;
   }
@@ -2545,6 +2550,17 @@ async function draftPick(pid){
     await logTx({type:'draft', team:oc.team, pid, pick:oc.i+1});
   }), `Drafted ${pl(pid).n}`);
 }
+/* ---- countdown to draft night ---- */
+const DRAFT_AT = Date.parse('2026-11-18T20:30:00-05:00');
+const draftAt = () => S.draft?.startAt || DRAFT_AT;
+function dcountTxt(){ const ms = draftAt() - Date.now(); if(ms <= 0) return 'Starting soon'; const t = Math.floor(ms/1000), d = Math.floor(t/86400), h = Math.floor(t%86400/3600), m = Math.floor(t%3600/60), sec = t%60;
+  return (d ? d+'d ' : '') + (d || h ? h+':'+String(m).padStart(2,'0') : m) + ':' + String(sec).padStart(2,'0'); }
+function draftCountHtml(){
+  if(S.draft?.status === 'live' || S.draft?.status === 'done' || (S.draft?.picks||[]).length) return '';
+  if(draftAt() < Date.now() - 3*3600e3) return '';
+  const when = new Date(draftAt()).toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York'});
+  return `<div class="dcount-c"><div><div class="eyebrow">Draft night</div><div class="dcount-w">${esc(when)} ET</div></div><span class="spacer"></span><div class="dcount">${dcountTxt()}</div></div>`;
+}
 /* ---- pick clock: when time runs out, the best available player is drafted automatically ---- */
 const pickSecs = d => d?.pickSecs ?? 120;
 function clockLeft(d){ if(!d || d.status !== 'live' || !pickSecs(d) || !d.clockStart) return null; return Math.ceil((d.clockStart + pickSecs(d)*1000 - Date.now())/1000); }
@@ -2577,6 +2593,7 @@ async function autoPick(idx){
 }
 setInterval(() => {
   const d = S.draft, sec = clockLeft(d);
+  document.querySelectorAll('.dcount').forEach(el => { el.textContent = dcountTxt(); });
   document.querySelectorAll('.pclock').forEach(el => { el.textContent = clockTxt(sec); el.classList.toggle('low', sec != null && sec <= 20); });
   if(sec == null || !db || !onClock(d)) return;
   // devices' clocks can differ: the commissioner's screen re-times each new pick by its own clock if the start looks off by more than 5 seconds
