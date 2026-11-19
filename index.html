@@ -263,6 +263,9 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .dl-t .pname{min-width:0;overflow:hidden}
 .dl-t .pname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 @media (max-width:560px){.dl-t th:nth-child(2),.dl-t td:nth-child(2){width:64px}.dl-t td:nth-child(2) .dim,.dl-t th:nth-child(2) .dim{display:none}.dl-t th:nth-child(3),.dl-t td:nth-child(3){width:78px}.dl-t td,.dl-t th{padding-left:6px;padding-right:6px}.dl-t .pill.rook{display:none}}
+.pclock{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;padding:4px 12px;border-radius:8px;background:var(--band2);color:var(--band-ink);min-width:72px;text-align:center}
+.pclock.low{background:#DC2626;color:#fff;animation:pcpulse 1s ease-in-out infinite}
+@keyframes pcpulse{50%{opacity:.75}}
 .lastpk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;padding:6px 12px;margin-top:-6px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
 .lastpk .eyebrow{margin:0}
 .lastpk .lp-p{display:inline-flex;align-items:center;gap:6px}
@@ -1209,7 +1212,7 @@ const tPill = t => { const c = teamCol(t); return `<span class="tpill"${c ? ` st
 function lastPickHtml(picks){
   if(!picks || !picks.length) return '';
   const x = picks[picks.length-1], P = pl(x.pid), c = teamCol(x.team);
-  return `<div class="lastpk"><span class="eyebrow">Last pick · #${picks.length}</span><span class="tpill"${c ? ` style="background:${c[0]};color:${c[1]}"` : ''}>${esc(tName(x.team))}</span><span class="lp-p">${posChip(P.pos)}<b data-sched="${esc(x.pid)}" data-kind="card">${esc(P.n)}</b>${teamBadge(P.t)}</span><span class="dim">${fmt(projOf(x.pid))} proj</span></div>`;
+  return `<div class="lastpk"><span class="eyebrow">Last pick · #${picks.length}</span><span class="tpill"${c ? ` style="background:${c[0]};color:${c[1]}"` : ''}>${esc(tName(x.team))}</span><span class="lp-p">${posChip(P.pos)}<b data-sched="${esc(x.pid)}" data-kind="card">${esc(P.n)}</b>${teamBadge(P.t)}</span><span class="dim">${fmt(projOf(x.pid))} proj</span>${x.auto ? '<span class="pill" title="Time ran out, so the best available player was drafted">Auto</span>' : ''}</div>`;
 }
 const bandVars = t => { const c = teamCol(t); return c ? ` style="--band:${c[0]};--band-ink:${c[1]};--band-muted:color-mix(in srgb, ${c[1]} 72%, ${c[0]});--band2:color-mix(in srgb, ${c[1]} 14%, ${c[0]})"` : ''; };
 const tBar = t => { const c = teamCol(t); return c ? `--tb:${c[0]};--tf:${c[1]}` : ''; };
@@ -1964,7 +1967,7 @@ function vDraft(){
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
   const c = cfg(), total = n * d.rounds;
   const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>Round ${oc.round} of ${d.rounds}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${esc(tName(oc.team))}</div></div><span class="spacer"></span>
-      ${oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
+      ${pickSecs(d) ? `<span class="pclock${(clockLeft(d)??99) <= 20 ? ' low' : ''}" title="Time left for this pick">${clockTxt(clockLeft(d))}</span>` : ''}${oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
     : `<div class="clock"><div><small>Draft complete</small><div class="big">${byIdx.length} players drafted</div></div><span class="spacer"></span>${isCommish()&&d.status!=='done'?'<button class="btn sm primary" data-act="finishDraft">Close the draft</button>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`;
   const seg = `<div class="seg" role="group">${[['all','Players'],['F','F'],['DT','D/T'],['G','Goalies']].map(([v,l])=>`<button data-act="dfilt" data-v="${v}" aria-pressed="${S.dpos===v}">${l}</button>`).join('')}</div>`;
   const teamAt = i => { const r = Math.floor(i/n), k = i % n; return d.order[r % 2 ? n-1-k : k]; };
@@ -2199,6 +2202,7 @@ function vCommish(){
     <div class="row">
       ${d?.status==='live'?'':`<button class="btn" data-act="shuffle">Randomize order</button><button class="btn primary" data-act="startDraft">${d?.picks?.length?'Resume draft':'Start draft'}</button>`}
       ${d?.status==='live'?`<button class="btn" data-act="pauseDraft">Pause draft</button>`:''}
+      <label class="row" style="gap:6px;font-size:14px">Pick clock<select data-act="pickSecs">${[[0,'Off'],[60,'1 min'],[90,'1.5 min'],[120,'2 min'],[180,'3 min']].map(([v,l]) => `<option value="${v}" ${pickSecs(d)===v?'selected':''}>${l}</option>`).join('')}</select></label>
       ${d ? `<button class="btn ghost danger" data-act="resetDraft">${S.confirm==='resetDraft'?'Confirm: delete all picks and empty rosters':'Reset draft'}</button>`:''}
     </div></div>
 
@@ -2536,18 +2540,59 @@ async function draftPick(pid){
     if(freshOwner(T)[pid]) fail('That player is already on a team.');
     d.picks = [...(d.picks||[]), {pid, team:oc.team}];
     const done = !onClock(d);
-    await db.doc('draft/state').update({picks:d.picks, status: done ? 'done' : 'live'});
+    await db.doc('draft/state').update({picks:d.picks, status: done ? 'done' : 'live', clockStart:Date.now()});
     await db.doc('teams/'+oc.team).update({roster:[...(T[oc.team].roster||[]), pid]});
     await logTx({type:'draft', team:oc.team, pid, pick:oc.i+1});
   }), `Drafted ${pl(pid).n}`);
 }
+/* ---- pick clock: when time runs out, the best available player is drafted automatically ---- */
+const pickSecs = d => d?.pickSecs ?? 120;
+function clockLeft(d){ if(!d || d.status !== 'live' || !pickSecs(d) || !d.clockStart) return null; return Math.ceil((d.clockStart + pickSecs(d)*1000 - Date.now())/1000); }
+const clockTxt = sec => sec == null ? '' : sec <= 0 ? '0:00' : `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+function autoChoice(d, team){
+  const c = cfg(), taken = new Set((d.picks||[]).map(x => x.pid)), own = ownerMap();
+  const mine = (d.picks||[]).filter(x => x.team === team).map(x => x.pid), cnt = {F:0, DT:0, G:0};
+  mine.forEach(p => cnt[slotOf(pl(p).pos)]++);
+  const left = d.rounds - mine.length, unmet = Math.max(0,c.slots.F-cnt.F) + Math.max(0,c.slots.DT-cnt.DT) + Math.max(0,c.slots.G-cnt.G);
+  const pool = Object.keys(S.players).filter(p => !taken.has(p) && !own[p] && pl(p).t && projOf(p) != null && !nllInj(p)).sort((a,b) => projOf(b) - projOf(a));
+  return pool.find(p => { const sl = slotOf(pl(p).pos); if(sl === 'G' && cnt.G >= 2) return false; if(left <= unmet && cnt[sl] >= c.slots[sl]) return false; return true; }) || pool[0];
+}
+async function autoPick(idx){
+  if(S.autoBusy) return; S.autoBusy = true;
+  try {
+    await withLock(async () => {
+      const d = clone((await db.doc('draft/state').get()).data());
+      if(!d || d.status !== 'live' || (d.picks||[]).length !== idx) return;
+      const lft = clockLeft(d); if(lft == null || lft > 0) return;
+      const oc = onClock(d); if(!oc) return;
+      const pid = autoChoice(d, oc.team); if(!pid) return;
+      const T = await freshTeams(); if(freshOwner(T)[pid]) return;
+      d.picks = [...(d.picks||[]), {pid, team:oc.team, auto:true}];
+      await db.doc('draft/state').update({picks:d.picks, status: onClock(d) ? 'live' : 'done', clockStart:Date.now()});
+      await db.doc('teams/'+oc.team).update({roster:[...(T[oc.team].roster||[]), pid]});
+      await logTx({type:'draft', team:oc.team, pid, pick:oc.i+1, auto:true});
+      toast(`Time ran out: ${tName(oc.team)} auto-drafted ${pl(pid).n}`);
+    });
+  } catch(e){ console.error(e); } finally { S.autoBusy = false; }
+}
+setInterval(() => {
+  const d = S.draft, sec = clockLeft(d);
+  document.querySelectorAll('.pclock').forEach(el => { el.textContent = clockTxt(sec); el.classList.toggle('low', sec != null && sec <= 20); });
+  if(sec == null || !db || !onClock(d)) return;
+  // devices' clocks can differ: the commissioner's screen re-times each new pick by its own clock if the start looks off by more than 5 seconds
+  const n = (d.picks||[]).length;
+  if(isCommish() && S.clkIdx !== n){ S.clkIdx = n; if(Math.abs(Date.now() - d.clockStart) > 5000 && Date.now() - (S.clkSeen||0) < 4000) { db.doc('draft/state').update({clockStart:Date.now()}).catch(()=>{}); return; } }
+  S.clkSeen = Date.now();
+  // the commissioner's screen makes the auto-pick; any other open screen steps in 15 seconds later as a backup
+  if(sec <= 0 && (isCommish() || sec <= -15) && canWrite()) autoPick((d.picks||[]).length);
+}, 1000);
 async function undoPick(){
   if(!isCommish()) return toast('Only the commissioner can undo a pick.', true);
   await run(() => withLock(async () => {
     const d = clone((await db.doc('draft/state').get()).data());
     const last = d?.picks?.[d.picks.length-1]; if(!last) return;
     const T = await freshTeams();
-    await db.doc('draft/state').update({picks:d.picks.slice(0,-1), status:'live'});
+    await db.doc('draft/state').update({picks:d.picks.slice(0,-1), status:'live', clockStart:Date.now()});
     if(T[last.team]) await db.doc('teams/'+last.team).update({roster:(T[last.team].roster||[]).filter(p=>p!==last.pid)});
   }), 'Last pick undone');
 }
@@ -2909,7 +2954,7 @@ document.addEventListener('click', async e => {
         await run(()=>db.doc('draft/state').set(Object.assign({rounds:c.rosterMax, picks:[], status:'setup'}, clone(S.draft)||{}, {order}))); break; }
     case 'shuffle': { const order = [...teamIds()]; for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
         await run(()=>db.doc('draft/state').set(Object.assign({rounds:c.rosterMax, picks:[], status:'setup'}, clone(S.draft)||{}, {order})), 'Order randomized'); break; }
-    case 'startDraft': await run(()=>db.doc('draft/state').set(Object.assign({picks:[]}, clone(S.draft)||{}, {order: S.draft?.order?.length ? S.draft.order : teamIds(), rounds:c.rosterMax, status:'live'})), 'Draft is live'); location.hash = '#draft'; break;
+    case 'startDraft': await run(()=>db.doc('draft/state').set(Object.assign({picks:[]}, clone(S.draft)||{}, {order: S.draft?.order?.length ? S.draft.order : teamIds(), rounds:c.rosterMax, status:'live', clockStart:Date.now(), pickSecs: S.draft?.pickSecs ?? 120})), 'Draft is live'); location.hash = '#draft'; break;
     case 'pauseDraft': await run(()=>db.doc('draft/state').update({status:'setup'}), 'Draft paused'); break;
     case 'loadMock': if(confirmStep('loadMock')) await run(() => withLock(async () => {
         const m = S.mock; if(!m || !mockDone(m)) fail('Finish the mock draft first.');
@@ -2939,7 +2984,7 @@ document.addEventListener('click', async e => {
     case 'resetDraft': if(confirmStep('resetDraft')) await run(async () => {
         const d = S.draft; const taken = new Set((d?.picks||[]).map(p=>p.pid));
         for(const t of teamIds()){ const T = S.teams[t]; if((T.roster||[]).some(p=>taken.has(p))) await db.doc('teams/'+t).update({roster:(T.roster||[]).filter(p=>!taken.has(p))}); }
-        await db.doc('draft/state').set({order:d?.order||teamIds(), rounds:c.rosterMax, picks:[], status:'setup'});
+        await db.doc('draft/state').set({order:d?.order||teamIds(), rounds:c.rosterMax, picks:[], status:'setup', pickSecs:pickSecs(d)});
       }, 'Draft reset'); break;
     case 'importPool': await importPool(); break;
     case 'movePlayer': {
@@ -2974,6 +3019,7 @@ document.addEventListener('change', async e => {
   if(a === 'setSlot') await setSlot(el.dataset.k, +el.dataset.i, el.value);
 
   else if(a === 'mockVar'){ S.mockVar = el.checked; }
+  else if(a === 'pickSecs'){ const v = +el.value; await run(() => db.doc('draft/state').update(Object.assign({pickSecs:v}, S.draft?.status === 'live' ? {clockStart:Date.now()} : {})), v ? `Pick clock set to ${clockTxt(v)}` : 'Pick clock off'); }
   else if(a === 'mockMe'){ S.mockMe = el.value; }
   else if(a === 'statWeek'){ S.statWeek = +el.value; S.preview = null; render(); }
   else if(a === 'statMode'){ S.statMode = el.value; S.preview = null; render(); }
