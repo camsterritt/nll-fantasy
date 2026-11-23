@@ -1823,9 +1823,9 @@ function mockTeamAt(m, i){ const n = m.order.length, r = Math.floor(i/n), k = i%
 function mockStart(me, variety){
   const c = cfg(), order = S.draft?.order?.length ? S.draft.order : teamIds(), n = order.length;
   const own = ownerMap();
-  const pool = Object.keys(S.players).filter(p => projOf(p) != null && !own[p] && pl(p).t);
+  const pool = Object.keys(S.players).filter(p => projOf(p) != null && !own[p]);   // every player can be drafted; computer teams stick to players on an NLL roster
   const need = {F:c.slots.F*n, DT:c.slots.DT*n, G:c.slots.G*n}, repl = {};
-  for(const s of ['F','DT','G']){ const a = pool.filter(p=>slotOf(pl(p).pos)===s).map(projOf).sort((x,y)=>y-x); repl[s] = a[need[s]] ?? 0; }
+  for(const s of ['F','DT','G']){ const a = pool.filter(p=>pl(p).t && slotOf(pl(p).pos)===s).map(projOf).sort((x,y)=>y-x); repl[s] = a[need[s]] ?? 0; }
   const T = {}; order.forEach(t => T[t] = {F:0, DT:0, G:0, n:0});
   S.mock = {order, rounds:c.rosterMax, picks:[], me: me || null, variety, repl, T, avail:new Set(pool), at:Date.now()};
   S.mq = ''; S.mpos = 'all';
@@ -1845,6 +1845,7 @@ function mockRule(m, team, pid){
 function mockScored(m, team){
   const out = [];
   for(const p of m.avail){
+    if(!pl(p).t) continue;
     const r = mockRule(m, team, p); if(!r.ok) continue;
     const s = slotOf(pl(p).pos);
     let v = projOf(p) - m.repl[s];                     // value over a replacement starter
@@ -2015,7 +2016,7 @@ function renderDraftList(){
   const oc = onClock(d), mt = myTeam(), own = ownerMap();
   const taken = new Set((d.picks||[]).map(p=>p.pid));
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
-  const list = filteredPlayers(S.dq, S.dpos, 'all', 'rank').filter(p => !taken.has(p) && !own[p] && pl(p).t && (S.dpos !== 'all' || posKey(pl(p).pos) !== 'G'));
+  const list = filteredPlayers(S.dq, S.dpos, 'all', 'rank').filter(p => !taken.has(p) && !own[p] && (S.dpos !== 'all' || posKey(pl(p).pos) !== 'G'));
   box.innerHTML = `<table class="dl-t"><thead><tr><th>Player</th><th class="r">Proj PPG <span class="dim" style="font-weight:600">· rank</span></th><th></th></tr></thead><tbody>${list.map(p => { const P=S.players[p];
     return `<tr data-sched="${esc(p)}"><td><div class="pname">${posChip(P.pos)}<b>${esc(P.n)}</b>${teamBadge(P.t)}${injTag(p)}${P.rook?`<span class="pill rook" title="${(P.rook.y?P.rook.y+' draft, pick '+P.rook.pk:'No recent NLL games')+(P.st==='Draft rights'?' · unsigned draft rights':'')}">R</span>`:''}</div></td><td class="r"><b>${fmt(projOf(p))}</b> <span class="dim" title="Rank among ${posLab(P.pos)} by 2027 projection">${posRank(p) ? posLab(P.pos)+' #'+posRank(p) : ''}</span></td>
     <td class="r">${canPick?`<button class="btn sm ${S.confirm==='pick:'+p?'primary':''}" data-act="pick" data-p="${esc(p)}">${S.confirm==='pick:'+p?'Confirm':'Draft'}</button>`:''}</td></tr>`; }).join('')
