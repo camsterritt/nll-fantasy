@@ -1785,7 +1785,7 @@ function renderPlayerList(){
     ${list.length > S.limit ? `<div style="padding:12px;text-align:center"><button class="btn" data-act="more">Show more (${list.length - S.limit} left)</button></div>`:''}
     ${!addsOpen() && mt ? '<p class="sub" style="padding:0 12px 12px">Free-agent adds open once the draft is complete.</p>':''}`;
 }
-const addsOpen = () => S.draft?.status === 'done' || (S.draft?.status !== 'live' && teamIds().some(t => (S.teams[t].roster||[]).length));
+const addsOpen = () => S.draft?.status === 'done' || (S.draft?.status !== 'live' && S.draft?.status !== 'paused' && !(S.draft?.picks||[]).length && teamIds().some(t => (S.teams[t].roster||[]).length));
 function openAdd(pid, keep){
   const mt = myTeam(); if(!mt) return;
   const t = S.teams[mt], c = cfg(), roster = t.roster||[], full = roster.length >= c.rosterMax, P = pl(pid);
@@ -1973,7 +1973,7 @@ function renderMockList(){
 /* ---- Draft ---- */
 function vDraft(){
   const d = S.draft, ids = teamIds();
-  if(!d || !d.order || d.status==='setup' || !d.status){
+  if(!d || !d.order || !d.status || (d.status==='setup' && !(d.picks||[]).length)){
     return `<div class="stack"><h2>Draft</h2>${draftCountHtml()}
       <div class="note">The real draft hasn’t started. ${isCommish() ? 'Set the order and start it under Commissioner → Draft.' : 'The commissioner will open the draft room here.'} Meanwhile, run a mock draft below to see how it could play out.</div>
       ${vMock()}</div>`;
@@ -1983,8 +1983,9 @@ function vDraft(){
   const byIdx = d.picks || [];
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
   const c = cfg(), total = n * d.rounds;
-  const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>Round ${oc.round} of ${d.rounds}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${esc(tName(oc.team))}</div></div><span class="spacer"></span>
-      ${pickSecs(d) ? `<span class="pclock${(clockLeft(d)??99) <= 20 ? ' low' : ''}" title="Time left for this pick">${clockTxt(clockLeft(d))}</span>` : ''}${d.autoTeams?.[oc.team] ? '<span class="pill live">Auto-drafting…</span>' : oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
+  const paused = d.status !== 'live' && d.status !== 'done';
+  const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>${paused ? 'Draft paused · ' : ''}Round ${oc.round} of ${d.rounds}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${esc(tName(oc.team))}</div></div><span class="spacer"></span>
+      ${paused ? '<span class="pill">Paused</span>' : ''}${pickSecs(d) && !paused ? `<span class="pclock${(clockLeft(d)??99) <= 20 ? ' low' : ''}" title="Time left for this pick">${clockTxt(clockLeft(d))}</span>` : ''}${d.autoTeams?.[oc.team] ? '<span class="pill live">Auto-drafting…</span>' : oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
     : `<div class="clock"><div><small>Draft complete</small><div class="big">${byIdx.length} players drafted</div></div><span class="spacer"></span>${isCommish()&&d.status!=='done'?'<button class="btn sm primary" data-act="finishDraft">Close the draft</button>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`;
   const seg = `<div class="seg" role="group">${[['all','Players'],['F','F'],['DT','D/T'],['G','Goalies']].map(([v,l])=>`<button data-act="dfilt" data-v="${v}" aria-pressed="${S.dpos===v}">${l}</button>`).join('')}</div>`;
   const teamAt = i => { const r = Math.floor(i/n), k = i % n; return d.order[r % 2 ? n-1-k : k]; };
@@ -2218,12 +2219,19 @@ function vCommish(){
 
   <div class="card stack"><h3>Draft</h3>
     <p class="sub" style="margin:0">Snake draft, ${c.rosterMax} rounds. Status: <b>${esc(d?.status||'not set up')}</b>${d?.picks?.length?` · ${d.picks.length} picks made`:''}.</p>
-    <ol style="margin:0;padding-left:22px">${order.map((t,i)=>`<li style="padding:2px 0">${esc(tName(t))} ${d?.status==='live'?`<button class="btn sm ${d.autoTeams?.[t]?'primary':'ghost'}" data-act="autoDraft" data-t="${t}">${d.autoTeams?.[t]?'Auto-draft on':'Auto-draft off'}</button>`:`<button class="btn sm ghost" data-act="ordUp" data-i="${i}" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="btn sm ghost" data-act="ordDown" data-i="${i}" aria-label="Move down" ${i===order.length-1?'disabled':''}>↓</button>`}</li>`).join('')}</ol>
+    <ol style="margin:0;padding-left:22px">${order.map((t,i)=>`<li style="padding:2px 0">${esc(tName(t))} ${d?.status==='live' || d?.picks?.length?`<button class="btn sm ${d.autoTeams?.[t]?'primary':'ghost'}" data-act="autoDraft" data-t="${t}">${d.autoTeams?.[t]?'Auto-draft on':'Auto-draft off'}</button>`:`<button class="btn sm ghost" data-act="ordUp" data-i="${i}" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="btn sm ghost" data-act="ordDown" data-i="${i}" aria-label="Move down" ${i===order.length-1?'disabled':''}>↓</button>`}</li>`).join('')}</ol>
     <div class="row">
-      ${d?.status==='live'?'':`<button class="btn" data-act="shuffle">Randomize order</button><button class="btn primary" data-act="startDraft">${d?.picks?.length?'Resume draft':'Start draft'}</button>`}
+      ${d?.status==='live'?'':`${d?.picks?.length?'':'<button class="btn" data-act="shuffle">Randomize order</button>'}<button class="btn primary" data-act="startDraft">${d?.picks?.length?'Resume draft':'Start draft'}</button>`}
       ${d?.status==='live'?`<button class="btn" data-act="pauseDraft">Pause draft</button>`:''}
       <label class="row" style="gap:6px;font-size:14px">Pick clock<select data-act="pickSecs">${[[0,'Off'],[60,'1 min'],[90,'1.5 min'],[120,'2 min'],[180,'3 min']].map(([v,l]) => `<option value="${v}" ${pickSecs(d)===v?'selected':''}>${l}</option>`).join('')}</select></label>
       ${d?.order ? `<button class="btn" data-act="rebuildPreview">Rebuild board from pick log</button>` : ''}
+    </div>
+    ${(() => { if(!d?.picks?.length) return ''; const by = {}; d.picks.forEach(x => (by[x.team] = by[x.team] || new Set()).add(x.pid));
+      const issues = teamIds().map(t => { const have = new Set([...(S.teams[t].roster||[]), ...(S.teams[t].ir||[])]), want = by[t] || new Set();
+        const extra = [...have].filter(p => !want.has(p)), missing = [...want].filter(p => !have.has(p)); return {t, extra, missing}; }).filter(x => x.extra.length || x.missing.length);
+      return issues.length ? `<div class="note" style="color:var(--loss)"><b>Rosters don’t match the draft board.</b> ${issues.map(x => `${esc(tName(x.t))}: ${x.extra.length ? 'extra '+x.extra.map(p => esc(pl(p).n)).join(', ') : ''}${x.extra.length && x.missing.length ? '; ' : ''}${x.missing.length ? 'missing '+x.missing.map(p => esc(pl(p).n)).join(', ') : ''}`).join(' · ')}
+        <div style="margin-top:6px"><button class="btn sm primary" data-act="fixRosters">Make rosters match the board</button></div></div>` : `<div class="note">✓ Every roster matches the draft board (${d.picks.length} picks).</div>`; })()}
+    <div class="row">
       ${d ? `<button class="btn ghost danger" data-act="resetDraft">${S.confirm==='resetDraft'?'Confirm: delete all picks and empty rosters':'Reset draft'}</button>`:''}
     </div></div>
 
@@ -2596,8 +2604,8 @@ async function rebuildPreview(){
   await run(async () => {
     const d = clone((await db.doc('draft/state').get()).data()); if(!d?.order) fail('No draft found.');
     const q = await db.collection('transactions').get();
-    const since = d.startedAt || 0;
-    const log = q.docs.map(x => x.data()).filter(x => x.type === 'draft' && x.pid && x.pick && (x.ts||0) >= since).sort((a,b) => (a.ts||0) - (b.ts||0));
+    const since = d.startedAt || 0, floor = d.logFloor || null;
+    const log = q.docs.map(x => x.data()).filter(x => x.type === 'draft' && x.pid && x.pick && (x.ts||0) >= since && !(floor && x.pick > floor.n && (x.ts||0) < floor.ts)).sort((a,b) => (a.ts||0) - (b.ts||0));
     const byNum = {}; for(const x of log) byNum[x.pick] = x;                       // the latest entry for each pick number wins (covers undo + re-pick)
     const seen = new Map(); for(const x of Object.values(byNum)) if(!seen.has(x.pid) || (seen.get(x.pid).ts||0) < (x.ts||0)) seen.set(x.pid, x);
     const picks = []; const n = d.order.length;
@@ -2620,7 +2628,7 @@ async function rebuildApply(){
     const d = await tx.get('draft/state'); const T = await txnTeams(tx, d);
     const by = {}; rb.picks.forEach(x => (by[x.team] = by[x.team] || []).push(x.pid));
     const drafted = new Set(rb.picks.map(x => x.pid));
-    tx.update('draft/state', {picks: rb.picks, status: onClock(Object.assign({}, d, {picks:rb.picks})) ? (d.status === 'done' ? 'live' : d.status) : 'done', clockStart:Date.now()});
+    tx.update('draft/state', {logFloor:{n:rb.picks.length, ts:Date.now()}, picks: rb.picks, status: onClock(Object.assign({}, d, {picks:rb.picks})) ? (d.status === 'done' ? 'live' : d.status) : 'done', clockStart:Date.now()});
     for(const t of Object.keys(T)) tx.update('teams/'+t, {roster: by[t] || [], ir: (T[t].ir||[]).filter(p => drafted.has(p) && (by[t]||[]).includes(p))});
   }), `Board rebuilt: ${rb.picks.length} picks`);
   S.rebuild = null; render();
@@ -2985,6 +2993,8 @@ document.addEventListener('click', async e => {
     case 'pick': if(S.confirm==='pick:'+b.dataset.p){ S.confirm=null; await draftPick(b.dataset.p); } else { S.confirm='pick:'+b.dataset.p; renderDraftList(); } break;
     case 'undoPick': await undoPick(); break;
     case 'rebuildPreview': await rebuildPreview(); break;
+    case 'fixRosters': await run(() => txn(async tx => { const d = await tx.get('draft/state'); const T = await txnTeams(tx, d); const by = {}; (d.picks||[]).forEach(x => (by[x.team] = by[x.team] || []).push(x.pid));
+        for(const t of Object.keys(T)) tx.update('teams/'+t, {roster: by[t] || [], ir: []}); }), 'Rosters now match the board'); break;
     case 'rebuildApply': await rebuildApply(); break;
     case 'rebuildCancel': S.rebuild = null; render(); break;
     case 'autoDraft': { const t = b.dataset.t; if(t !== myTeam() && !isCommish()) break; const on = !S.draft?.autoTeams?.[t];
@@ -3048,7 +3058,7 @@ document.addEventListener('click', async e => {
         await run(()=>db.doc('draft/state').set(Object.assign({rounds:c.rosterMax, picks:[], status:'setup'}, clone(S.draft)||{}, {order})), 'Order randomized'); break; }
     case 'startDraft': await run(()=>txn(async tx => { const d = await tx.get('draft/state'); const base = {order: d?.order?.length ? d.order : teamIds(), rounds:c.rosterMax, status:'live', clockStart:Date.now(), pickSecs: d?.pickSecs ?? 120, startedAt: (d?.picks?.length && d.startedAt) || (d?.picks?.length ? 0 : Date.now())};
         if(d) tx.update('draft/state', base); else tx.set('draft/state', Object.assign({picks:[]}, base)); }), 'Draft is live'); location.hash = '#draft'; break;
-    case 'pauseDraft': await run(()=>db.doc('draft/state').update({status:'setup'}), 'Draft paused'); break;
+    case 'pauseDraft': await run(()=>db.doc('draft/state').update({status:'paused'}), 'Draft paused'); break;
     case 'loadMock': if(confirmStep('loadMock')) await run(() => withLock(async () => {
         const m = S.mock; if(!m || !mockDone(m)) fail('Finish the mock draft first.');
         const by = {}; m.order.forEach(t => by[t] = []);
