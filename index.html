@@ -2033,8 +2033,6 @@ function draftResultsHtml(d){
       <div class="dr-l">${list.map(x => `<div class="dr-r"><span class="dr-k">${Math.ceil(x.k/n)}.${String((x.k-1)%n+1).padStart(2,'0')}</span>${posChip(pl(x.pid).pos)}<b data-sched="${esc(x.pid)}" data-kind="card">${esc(pl(x.pid).n)}</b>${teamBadge(pl(x.pid).t)}${x.auto ? '<span class="pill">Auto</span>' : ''}</div>`).join('')}</div></div>`; };
   const order = mt && d.order.includes(mt) ? [mt, ...d.order.filter(t => t !== mt)] : d.order;
   return `<div class="stack"><div class="row"><h2>Draft results</h2><span class="sub">${byIdx.length} picks · ${d.rounds} rounds</span></div>
-    <div class="dr-grid">${order.map(teamCard).join('')}</div>
-    <h3>Draft board</h3>
     <div class="card flush"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, -1, true, mt)}</div></div></div>`;
 }
 function renderDraftList(){
