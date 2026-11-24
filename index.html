@@ -279,6 +279,19 @@ tr.cut td{border-bottom:2px dashed var(--accent)}
 .adr-k{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
 .adraft.on .adr-t{background:var(--accent)}
 .adraft.on .adr-k{transform:translateX(20px)}
+.dr-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.dr-team{overflow:hidden}
+.dr-team.me{box-shadow:0 0 0 2px var(--ink)}
+.dr-h{display:flex;flex-direction:column;padding:8px 12px;background:var(--surface2);line-height:1.2}
+.dr-h b{font-family:var(--f-display);font-size:16px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dr-h span{font-size:11px;opacity:.75}
+.dr-l{padding:4px 0}
+.dr-r{display:flex;align-items:center;gap:6px;padding:3px 10px;font-size:13px;min-width:0}
+.dr-r b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dr-r .tl{width:16px;height:16px}
+.dr-k{font-size:11px;color:var(--muted);width:30px;flex:none;font-variant-numeric:tabular-nums}
+@media (max-width:1000px){.dr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.dr-grid{grid-template-columns:1fr}}
 .pclock{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;padding:4px 12px;border-radius:8px;background:var(--band2);color:var(--band-ink);min-width:72px;text-align:center}
 .pclock.low{background:#DC2626;color:#fff;animation:pcpulse 1s ease-in-out infinite}
 @keyframes pcpulse{50%{opacity:.75}}
@@ -1199,7 +1212,7 @@ const S = {
 let db = null, user = null, memo = {};
 const $ = s => document.querySelector(s);
 const cfg = () => mergeCfg(S.config);
-const VIEWS = [['draft','Draft'],['matchups','Matchups'],['standings','Standings'],['team','My team'],['players','Players'],['activity','Activity'],['rules','Rules'],['commish','Commissioner']];
+const VIEWS = [['team','My team'],['matchups','Matchups'],['standings','Standings'],['players','Players'],['draft','Draft'],['activity','Activity'],['rules','Rules'],['commish','Commissioner']];
 
 function teamIds(){ return Object.keys(S.teams).sort((a,b)=>((S.teams[a].order??99)-(S.teams[b].order??99)) || String(S.teams[a].name).localeCompare(S.teams[b].name)); }
 function tName(id){ return S.teams[id]?.name || '—'; }
@@ -1983,6 +1996,7 @@ function vDraft(){
   const byIdx = d.picks || [];
   const canPick = oc && canWrite() && (oc.team===mt || isCommish());
   const c = cfg(), total = n * d.rounds;
+  if(d.status === 'done' && !oc) return draftResultsHtml(d);
   const paused = d.status !== 'live' && d.status !== 'done';
   const clock = oc ? `<div class="clock"${bandVars(oc.team)}><div><small>${paused ? 'Draft paused · ' : ''}Round ${oc.round} of ${d.rounds}, pick ${oc.pick} · #${oc.i+1} overall</small><div class="big">${esc(tName(oc.team))}</div></div><span class="spacer"></span>
       ${paused ? '<span class="pill">Paused</span>' : ''}${pickSecs(d) && !paused ? `<span class="pclock${(clockLeft(d)??99) <= 20 ? ' low' : ''}" title="Time left for this pick">${clockTxt(clockLeft(d))}</span>` : ''}${d.autoTeams?.[oc.team] ? '<span class="pill live">Auto-drafting…</span>' : oc.team===mt?'<span class="pill live">You’re on the clock</span>':''}${isCommish()?`<button class="btn sm" data-act="undoPick" ${byIdx.length?'':'disabled'}>Undo last pick</button>`:''}</div>`
@@ -2010,6 +2024,18 @@ function vDraft(){
     ${mineCard ? `<div class="two">${mineCard}${avail}</div>` : avail}
     <div class="card flush"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, oc ? oc.i : -1, true, mt)}</div></div>
     ${mt ? slotTableHtml(byIdx.filter(x=>x.team===mt).map(x=>x.pid), 'Your lineup by week') : ''}</div>`;
+}
+function draftResultsHtml(d){
+  const mt = myTeam(), byIdx = d.picks || [], n = d.order.length;
+  const by = {}; byIdx.forEach((x,i) => (by[x.team] = by[x.team] || []).push(Object.assign({k:i+1}, x)));
+  const teamCard = t => { const c = teamCol(t), list = by[t] || [];
+    return `<div class="card flush dr-team${t===mt?' me':''}"><div class="dr-h"${c ? ` style="background:${c[0]};color:${c[1]}"` : ''}><b>${esc(tName(t))}</b>${mgrName(t) && mgrName(t)!=='Unclaimed' ? `<span>${esc(mgrName(t))}</span>` : ''}</div>
+      <div class="dr-l">${list.map(x => `<div class="dr-r"><span class="dr-k">${Math.ceil(x.k/n)}.${String((x.k-1)%n+1).padStart(2,'0')}</span>${posChip(pl(x.pid).pos)}<b data-sched="${esc(x.pid)}" data-kind="card">${esc(pl(x.pid).n)}</b>${teamBadge(pl(x.pid).t)}${x.auto ? '<span class="pill">Auto</span>' : ''}</div>`).join('')}</div></div>`; };
+  const order = mt && d.order.includes(mt) ? [mt, ...d.order.filter(t => t !== mt)] : d.order;
+  return `<div class="stack"><div class="row"><h2>Draft results</h2><span class="sub">${byIdx.length} picks · ${d.rounds} rounds</span></div>
+    <div class="dr-grid">${order.map(teamCard).join('')}</div>
+    <h3>Draft board</h3>
+    <div class="card flush"><div class="tbl" style="padding:8px">${boardHtml(d.order, d.rounds, byIdx, -1, true, mt)}</div></div></div>`;
 }
 function renderDraftList(){
   const box = $('#dlist'); if(!box) return;
@@ -3179,7 +3205,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape' && !$('#overlay'
 
 function route(){
   const h = (location.hash||'').slice(1);
-  S.view = VIEWS.some(([k])=>k===h) ? h : 'matchups';
+  S.view = VIEWS.some(([k])=>k===h) ? h : (S.draft && S.draft.status !== 'done' ? 'draft' : 'team');
   S.confirm = null; S.teamMenu = false; if(S.view === 'team') S.selTeam = null; window.scrollTo(0,0); render();
 }
 window.addEventListener('hashchange', route);
