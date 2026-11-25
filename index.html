@@ -1333,6 +1333,34 @@ async function seedExtraPlayers(){
   try { const d = (await db.doc('league/players').get()).data(); const p = d.p || {}; for(const [id, x] of miss) if(!p[id]) p[id] = x;
     await db.doc('league/players').set(Object.assign({}, d, {p})); } catch(e){ console.error(e); S.extraSeeded = false; }
 }
+/* ---- roster clean-up: changes the commissioner asked for, applied once the next time the commissioner opens the site ---- */
+const CLEANUP = [
+  {id:'buf-2026-11-25', note:'Buffalo Bandits roster clean-up',
+   holdout:['larson-sundown','justin-sykes'],
+   offTeam:['angus-macdonell','arrow-booth','coltrane-tyson','kyle-gonsiorek','matt-spanger','micah-hanson','mike-mccannell','nate-ruff','obrigh-tallchief','owen-rice','raymond-cortes-ii','ryan-andrews','thomas-whitty','tyler-hendrycks','zack-belter'],
+   rename:{'waukiigan-shognosh':'Wakiigan Shognosh'}},
+];
+async function runCleanup(){
+  if(S.cleanupRan || !isCommish() || !S.config || !db || !Object.keys(S.players).length) return;
+  const done = new Set(S.config.cleanupDone || []), todo = CLEANUP.filter(x => !done.has(x.id)); S.cleanupRan = true; if(!todo.length) return;
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const pd = clone((await db.doc('league/players').get()).data()); const P = pd.p || {};
+    const st = await db.doc('nll/status').get(); const sd = st.exists ? clone(st.data()) : {}; sd.players = sd.players || {};
+    for(const op of todo){
+      for(const id of op.offTeam || []) if(P[id]) { P[id].t = ''; P[id].rel = today; delete sd.players[id]; }
+      for(const [id, n] of Object.entries(op.rename || {})) if(P[id]) P[id].n = n;
+      for(const id of op.holdout || []) if(P[id]) sd.players[id] = {list:'Holdout List', date:today, team:P[id].t || '', manual:true};
+      for(const id of op.practice || []) if(P[id]) sd.players[id] = {list:'Practice Player List', date:today, team:P[id].t || '', manual:true};
+      for(const id of op.ir || []) if(P[id]) sd.players[id] = {list:'Injured Reserve List', date:today, team:P[id].t || '', manual:true};
+      for(const [id, pos] of Object.entries(op.pos || {})) if(P[id]) P[id].pos = pos;
+    }
+    await db.doc('league/players').set(Object.assign({}, pd, {p:P}));
+    await db.doc('nll/status').set(sd);
+    await db.doc('league/config').update({cleanupDone:[...done, ...todo.map(x => x.id)]});
+    toast(`Applied: ${todo.map(x => x.note).join(', ')}`);
+  } catch(e){ console.error(e); S.cleanupRan = false; }
+}
 async function seedMgrNames(){
   if(S.mgrSeeded || !isCommish() || !S.config || !S.ready.teams || !teamIds().length || !db) return; S.mgrSeeded = true;
   const rules = [[/^teat/i, 'Cam'], [/^st\.?\s*kitts/i, 'John'], [/^kyle/i, 'Kyle']];
@@ -1456,7 +1484,7 @@ function render(){
   if(S.view==='players') renderPlayerList();
   if(S.view==='draft'){ renderDraftList(); renderMockList(); }
   renderGate();
-  seedMgrNames(); seedExtraPlayers();
+  seedMgrNames(); seedExtraPlayers(); runCleanup();
 }
 function renderGate(){
   const g = $('#gate'); if(!g) return;
