@@ -645,6 +645,7 @@ tr.lu-empty td{background:repeating-linear-gradient(-45deg,transparent 0 6px,var
 .tm-unsub{background:transparent;border:1px solid var(--band2);color:var(--band-muted);font:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;cursor:pointer}
 .tm-unsub:hover{color:var(--band-ink);border-color:var(--band-ink)}
 .pill.inj.prac{background:#E0ECFF;color:#1D4ED8;border-color:#1D4ED8}
+.pill.inj.susp{background:#E5E7EB;color:#374151;border-color:#374151}
 .pill.inj.hold{background:#F3E8FF;color:#7E22CE;border-color:#7E22CE}
 .lu-fill.open{background:#E0ECFF;color:#1D4ED8}
 .rec{font-weight:500;color:var(--muted);font-size:.92em}
@@ -1114,8 +1115,8 @@ function coverage(pids){
 }
 const nllInj = pid => S.nll?.players?.[pid] || null;
 /* players on an NLL injured, practice or holdout list: not playing, and allowed in IR slots */
-const listKind = l => /practice/i.test(l||'') ? 'prac' : /hold\s*-?\s*out/i.test(l||'') ? 'hold' : 'ir';
-const KIND_LAB = {ir:'IR', prac:'Practice', hold:'Holdout'}, KIND_SHORT = {ir:'INJ', prac:'PRAC', hold:'HOLDOUT'};
+const listKind = l => /practice/i.test(l||'') ? 'prac' : /hold\s*-?\s*out/i.test(l||'') ? 'hold' : /suspend/i.test(l||'') ? 'susp' : 'ir';
+const KIND_LAB = {ir:'IR', prac:'Practice', hold:'Holdout', susp:'Suspended'}, KIND_SHORT = {ir:'INJ', prac:'PRAC', hold:'HOLDOUT', susp:'SUSP'};
 const nllKind = pid => { const s = nllInj(pid); return s ? listKind(s.list) : null; };
 function injTag(pid, onIR){
   const s = nllInj(pid);
@@ -1350,7 +1351,8 @@ const CLEANUP = [
   {"id":"col-2026-11-25","note":"Colorado Mammoth roster clean-up","team":{"stuart-phillips":"COL","will-malcom":"COL","owen-rahn":"COL","braedon-saris":"COL","ryan-lee":"COL","thomas-vela":"COL","jack-hannah":"COL","andrew-kew":"COL","jameson-bucktooth":"COL","dylan-mcintosh":"COL","eli-mclaughlin":"COL","tim-edwards":"COL","alex-pace":"COL","warren-jeffrey":"COL","robert-hope":"COL","connor-nock":"COL","owen-down":"COL","jordan-gilles":"COL","ari-stevens":"COL","axel-sanderson":"COL","jalen-chaster":"COL","dylan-hess":"COL","conner-cook":"COL","cole-teeple":"COL","matthew-paolatto":"COL","nathan-whittom":"COL","dillon-ward":"COL","brodie-wade":"COL","brett-craig":"COL","zach-constantopoulos":"COL","ethan-robertson":"COL","ryan-stines":"COL"},"ir":["ryan-lee","stuart-phillips","matthew-paolatto","brett-craig"],"pup":["jack-hannah","ari-stevens","dylan-hess"],"practice":["zach-constantopoulos","ethan-robertson","ryan-stines"],"offTeam":["tj-comizio","steph-charbonneau","brian-simmons","evan-messenger","brent-mitchell","andrew-borgatti","joe-juengerkes","colin-sharkey","asher-nolting","christopher-davis","finn-halladay","kaleb-martin","nathan-laliberte","oskar-lucas","ryan-favaro","ryan-mclean"]},
   {"id":"col-2026-11-25b","note":"Colorado: holdouts and Brodie Wade","team":{"oskar-lucas":"COL"},"holdout":["ethan-robertson","zach-constantopoulos","oskar-lucas"],"offTeam":["brodie-wade"]},
   {"id":"ga-2026-11-25","note":"GA roster clean-up","team":{"isaiah-davis-allen":"GA","lyle-thompson":"GA","mike-manley":"GA","jacob-hickey":"GA","ben-trumble":"GA","jeff-henrick":"GA","kason-tarbell":"GA","seth-van-schepen":"GA","nolan-byrne":"GA","liam-mcgrath":"GA","richie-connell":"GA","jordan-macintosh":"GA","adam-wiedemann":"GA","deacon-knott":"GA","shayne-jackson":"GA","brett-dobson":"GA","bryan-cole":"GA","toron-eccleston":"GA","bo-columbus":"GA","david-anderson":"GA","lukas-nielsen":"GA","kean-moon":"GA","michael-grace":"GA","kaleb-benedict":"GA","connor-kelly":"GA","jack-travassos":"GA","aiden-macdonell":"GA","brenden-boyle":"GA","brinley-wilson":"GA"},"ir":["kean-moon","michael-grace","kaleb-benedict"],"holdout":["connor-kelly"],"practice":["jack-travassos","aiden-macdonell","brenden-boyle","brinley-wilson"],"offTeam":["alex-bean","blake-eiland","bobby-van-buren","calum-leaver-preyra","devlin-shanahan","jack-cascadden","jake-taylor","kyle-lewis","max-neeson"]},
-  {"id":"hfx-2026-11-25","offTeamOf":"HFX","note":"HFX roster clean-up","team":{"casey-wilson":"HFX","graeme-hossack":"HFX","alex-marinier":"HFX","max-wilson":"HFX","david-peterkin":"HFX","jason-knox":"HFX","johnny-pearson":"HFX","jake-withers":"HFX","mike-robinson":"HFX","brendan-bomberry":"HFX","sam-la-roue":"HFX","clarke-petterson":"HFX","justin-geddie":"HFX","ryan-terefenko":"HFX","colton-armstrong":"HFX","matt-marinier":"HFX","trevor-smyth":"HFX","warren-hill":"HFX","wake-riat-bowhunter":"HFX","cody-jamieson":"HFX","thomas-hoggarth":"HFX","curtis-romanchych":"HFX","tyler-biles":"HFX","randy-staats":"HFX","daniel-amesbury":"HFX","dustyn-birkhof":"HFX","ethan-o-connor":"HFX","will-macleod":"HFX","coltrane-tyson":"HFX","landen-sinfield":"HFX"},"ir":["curtis-romanchych","tyler-biles","randy-staats"],"holdout":["daniel-amesbury","dustyn-birkhof"],"practice":["ethan-o-connor","will-macleod","coltrane-tyson","landen-sinfield"],"offTeam":["aiden-long","ajax-zappitello","cam-macleod","cole-kirst","connor-gorman","nick-crowley","riley-hutchcraft","rory-graham","tyden-redlick"]}
+  {"id":"hfx-2026-11-25","offTeamOf":"HFX","note":"HFX roster clean-up","team":{"casey-wilson":"HFX","graeme-hossack":"HFX","alex-marinier":"HFX","max-wilson":"HFX","david-peterkin":"HFX","jason-knox":"HFX","johnny-pearson":"HFX","jake-withers":"HFX","mike-robinson":"HFX","brendan-bomberry":"HFX","sam-la-roue":"HFX","clarke-petterson":"HFX","justin-geddie":"HFX","ryan-terefenko":"HFX","colton-armstrong":"HFX","matt-marinier":"HFX","trevor-smyth":"HFX","warren-hill":"HFX","wake-riat-bowhunter":"HFX","cody-jamieson":"HFX","thomas-hoggarth":"HFX","curtis-romanchych":"HFX","tyler-biles":"HFX","randy-staats":"HFX","daniel-amesbury":"HFX","dustyn-birkhof":"HFX","ethan-o-connor":"HFX","will-macleod":"HFX","coltrane-tyson":"HFX","landen-sinfield":"HFX"},"ir":["curtis-romanchych","tyler-biles","randy-staats"],"holdout":["daniel-amesbury","dustyn-birkhof"],"practice":["ethan-o-connor","will-macleod","coltrane-tyson","landen-sinfield"],"offTeam":["aiden-long","ajax-zappitello","cam-macleod","cole-kirst","connor-gorman","nick-crowley","riley-hutchcraft","rory-graham","tyden-redlick"]},
+  {"id":"lv-2026-11-25","offTeamOf":"LV","note":"LV roster clean-up","team":{"drew-belgrave":"LV","jonathan-donville":"LV","ben-soenen":"LV","nathan-pouliot":"LV","john-lafontaine":"LV","mitch-jones":"LV","graydon-stokes":"LV","michael-white":"LV","mitchell-armstrong":"LV","john-alie":"LV","zachary-young":"LV","chris-cloutier":"LV","austin-shanks":"LV","connor-kirst":"LV","nick-damude":"LV","landon-kells":"LV","jake-govett":"LV","caleb-khan":"LV","koleton-marquis":"LV","ryan-wagner":"LV","jackson-webster":"LV","sam-leclair":"LV","tyson-bell":"LV","chase-fraser":"LV","adam-poitras":"LV","sean-westley":"LV","kyle-killen":"LV","rhys-blake":"LV","luke-pilcher":"LV","brandon-goodwin":"LV","tyrell-hamer-jackson":"LV"},"ir":["chase-fraser","adam-poitras","sean-westley","kyle-killen"],"practice":["luke-pilcher","brandon-goodwin","tyrell-hamer-jackson"],"offTeam":["chris-corbeil","nick-preston","owen-tasse"],"suspended":["rhys-blake"]}
 ];
 async function runCleanup(){
   if(S.cleanupRan || !isCommish() || !S.config || !db || !Object.keys(S.players).length) return;
@@ -1368,6 +1370,7 @@ async function runCleanup(){
       for(const id of op.practice || []) if(P[id]) sd.players[id] = {list:'Practice Player List', date:today, team:P[id].t || '', manual:true};
       for(const id of op.ir || []) if(P[id]) sd.players[id] = {list:'Injured Reserve List', date:today, team:P[id].t || '', manual:true};
       for(const id of op.pup || []) if(P[id]) sd.players[id] = {list:'Physically Unable to Perform List', date:today, team:P[id].t || '', manual:true};
+      for(const id of op.suspended || []) if(P[id]) sd.players[id] = {list:'Suspended List', date:today, team:P[id].t || '', manual:true};
       for(const [id, pos] of Object.entries(op.pos || {})) if(P[id]) P[id].pos = pos;
     }
     await db.doc('league/players').set(Object.assign({}, pd, {p:P}));
@@ -1687,7 +1690,7 @@ function vTeam(){
     ins.forEach((p, n) => { const o = outs[n]; if(o) moves.push({k, i:o[1], inP:p, outP:o[0]}); });
     weak[k] = L[k].length - best.length;
   }
-  const why = p => !p ? 'empty spot' : nllInj(p) ? ({ir:'injured',prac:'practice roster',hold:'holdout'})[nllKind(p)] : gamesFor(p, w) === 0 ? 'bye' : fmt(wv(p))+' proj';
+  const why = p => !p ? 'empty spot' : nllInj(p) ? ({ir:'injured',prac:'practice roster',hold:'holdout',susp:'suspended'})[nllKind(p)] : gamesFor(p, w) === 0 ? 'bye' : fmt(wv(p))+' proj';
   const last = p => esc(pl(p).n.split(' ').slice(1).join(' ') || pl(p).n);
   const tagOut = p => !p ? '' : nllInj(p) ? `<span class="sm-tag bad">${KIND_SHORT[nllKind(p)]}</span>` : gamesFor(p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-tag">${fmt(wv(p))}</span>`;
   const tagIn = p => gamesFor(p, w) === 2 ? '<span class="sm-tag good">2G</span>' : (() => { const g = (NLL_SCHED[nllWeekOf(w)]||[]).find(x => x[0]===pl(p).t || x[1]===pl(p).t); return g ? `<span class="sm-opp">${g[0]===pl(p).t ? '@ '+esc(g[1]) : 'vs '+esc(g[0])}</span>` : ''; })();
@@ -1695,7 +1698,7 @@ function vTeam(){
   const singles = [...moves.filter(m => m.outP).map(m => ({act:'bench', p:m.outP, k:m.k, i:m.i})), ...moves.filter(m => !m.outP).map(m => ({act:'start', p:m.inP, k:m.k, i:m.i}))];
   const mvCard = lineupEditable && singles.length ? `<div class="card tm-side-c sm-card"><div class="eyebrow">Lineup fixes <span class="sm-n">${singles.length}</span></div>
       <div class="sm-list">${singles.map(m => `<div class="sm-r">
-        <span class="sm-i"><span class="sm-il"><b data-sched="${esc(m.p)}" data-kind="card">${esc(pl(m.p).n)}</b>${teamBadge(pl(m.p).t)}</span>${m.act === 'bench' ? (nllInj(m.p) ? `<span class="sm-tag bad">${({ir:'INJURED',prac:'PRACTICE',hold:'HOLDOUT'})[nllKind(m.p)]}</span>` : gamesFor(m.p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-opp">${fmt(wv(m.p))} proj · bench has better</span>`) : tagIn(m.p)}</span>
+        <span class="sm-i"><span class="sm-il"><b data-sched="${esc(m.p)}" data-kind="card">${esc(pl(m.p).n)}</b>${teamBadge(pl(m.p).t)}</span>${m.act === 'bench' ? (nllInj(m.p) ? `<span class="sm-tag bad">${({ir:'INJURED',prac:'PRACTICE',hold:'HOLDOUT',susp:'SUSPENDED'})[nllKind(m.p)]}</span>` : gamesFor(m.p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-opp">${fmt(wv(m.p))} proj · bench has better</span>`) : tagIn(m.p)}</span>
         ${m.act === 'bench' ? `<button class="btn drp" data-act="benchNow" data-k="${m.k}" data-i="${m.i}">Bench</button>` : `<button class="btn swp go" data-act="slotPick" data-k="${m.k}" data-i="${m.i}" data-p="${esc(m.p)}">Start</button>`}</div>`).join('')}</div>
       <button class="btn sm-all" data-act="bestLineup">Apply all</button>
     </div>` : '';
@@ -2285,7 +2288,7 @@ function vCommish(){
   <div class="card stack"><h3>Tag a player: IR, Practice or Holdout</h3>
     <p class="sub" style="margin:0">For when the NLL lists don’t cover it. A tagged player can go in an IR slot and is treated as not playing. Removing a tag makes him active again (if he’s on a fantasy IR, his manager sees “Healthy: activate”).</p>
     <div class="row"><input type="text" id="tagQ" list="tagList" placeholder="Player name" style="flex:1 1 200px"><datalist id="tagList">${Object.keys(S.players).map(p => `<option value="${esc(pl(p).n)}">`).join('')}</datalist>
-      <select id="tagKind"><option value="ir">IR (injured)</option><option value="prac">Practice</option><option value="hold">Holdout</option><option value="">Remove tag</option></select>
+      <select id="tagKind"><option value="ir">IR (injured)</option><option value="prac">Practice</option><option value="hold">Holdout</option><option value="susp">Suspended</option><option value="">Remove tag</option></select>
       <button class="btn primary" data-act="tagPlayer">Apply</button></div></div>
 
   <div class="card stack"><h3>NLL injury feed</h3>
@@ -2411,7 +2414,7 @@ const logTx = x => db.collection('transactions').add(Object.assign({ts:Date.now(
 const NLL_TEAMS = [['BUF',['buffalo','bandits']],['CGY',['calgary','roughnecks']],['COL',['colorado','mammoth']],['GA',['georgia','geogia','swarm']],['HFX',['halifax','thunderbirds']],['LV',['las vegas','desert dogs']],['OSH',['oshawa','firewolves']],['ROC',['rochester','knighthawks']],['SD',['san diego','seals']],['SSK',['saskatchewan','rush']],['TOR',['toronto','rock']],['VAN',['vancouver','warriors']]];
 const teamIn = str => { const x = String(str||'').toLowerCase(); for(const [a,ks] of NLL_TEAMS) if(ks.some(k => new RegExp('\\b'+k+'\\b').test(x))) return a; return null; };
 const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-const isInj = l => /injured reserve|physically unable|practice|hold\s*-?\s*out/i.test(l||'');
+const isInj = l => /injured reserve|physically unable|practice|hold\s*-?\s*out|suspend/i.test(l||'');
 const isAct = l => /active roster|practice/i.test(l||'');
 function splitNames(x){
   return String(x||'').replace(/\bgoalie\b|\bgoaltender\b|\bforward\b|\bdefen[cs]eman\b|\btransition\b/gi,'').replace(/\s+and\s+/g, ',').split(',').map(n => n.trim().replace(/^(?:and)\s+/i,'')).filter(n => n && /[A-Za-z]/.test(n) && !/pick|round|draft|consideration|future|rights/i.test(n));
@@ -3080,7 +3083,7 @@ document.addEventListener('click', async e => {
     case 'rebuildPreview': await rebuildPreview(); break;
     case 'tagPlayer': { const name = ($('#tagQ')?.value || '').trim(), kind = $('#tagKind')?.value || '';
       const pid = Object.keys(S.players).find(p => keyOf(pl(p).n) === keyOf(name)); if(!pid){ toast('No player by that name in the pool.', true); break; }
-      const LIST = {ir:'Injured Reserve List', prac:'Practice Player List', hold:'Holdout List'};
+      const LIST = {ir:'Injured Reserve List', prac:'Practice Player List', hold:'Holdout List', susp:'Suspended List'};
       await run(async () => { const cur = (await db.doc('nll/status').get()); const sd = cur.exists ? clone(cur.data()) : {}; sd.players = sd.players || {};
         if(kind) sd.players[pid] = {list:LIST[kind], date:new Date().toISOString().slice(0,10), team:pl(pid).t || '', manual:true}; else delete sd.players[pid];
         await db.doc('nll/status').set(sd); }, kind ? `${pl(pid).n} tagged ${KIND_LAB[kind]}` : `${pl(pid).n}’s tag removed`);
