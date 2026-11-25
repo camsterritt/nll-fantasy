@@ -1338,7 +1338,8 @@ const CLEANUP = [
   {id:'buf-2026-11-25', note:'Buffalo Bandits roster clean-up',
    holdout:['larson-sundown','justin-sykes'],
    offTeam:['angus-macdonell','arrow-booth','coltrane-tyson','kyle-gonsiorek','matt-spanger','micah-hanson','mike-mccannell','nate-ruff','obrigh-tallchief','owen-rice','raymond-cortes-ii','ryan-andrews','thomas-whitty','tyler-hendrycks','zack-belter'],
-   rename:{'waukiigan-shognosh':'Wakiigan Shognosh'}},
+  },
+  {id:'buf-2026-11-25b', note:'Shognosh spelling restored', rename:{'waukiigan-shognosh':'Waukiigan Shognosh'}},
 ];
 async function runCleanup(){
   if(S.cleanupRan || !isCommish() || !S.config || !db || !Object.keys(S.players).length) return;
@@ -1774,7 +1775,7 @@ function vPlayers(){
       ${top.map((p,i) => `<div class="ld-r"><span class="ld-n">${i+1}</span>${teamBadge(pl(p).t)}<div class="ld-nm"><b data-sched="${esc(p)}" data-kind="card">${esc(pl(p).n)}</b><span>${esc(oppText(pl(p).t, upW))}${gamesFor(p, upW)===2?' · 2 games':''}</span></div><b class="ld-v${S.season[p]?'':' ld-proj'}" title="${S.season[p]?'Points per game':'Projected points per game'}">${fmt(val(p))}</b>${canAddTop?`<button class="btn add" data-act="addOpen" data-p="${esc(p)}" aria-label="Add ${esc(pl(p).n)}">+ Add</button>`:''}</div>`).join('') || '<p class="sub" style="margin:6px 0">No one available.</p>'}</div>`;
   }).join('') : '';
   return `<div class="stack">
-    <div class="row"><h2>Players</h2><span class="sub">${n} in the pool${inSeason ? ' · hover or tap a player for his game log' : ''}</span></div>
+    <div class="row"><h2>Players</h2><span class="sub">${Object.keys(S.players).filter(p => pl(p).t).length} on NLL rosters${inSeason ? ' · hover or tap a player for his game log' : ''}</span></div>
     ${showFA ? `<div class="row" style="gap:8px"><h3>Best available</h3><span class="sub">Free agents playing in ${esc(weekName(upW))}, not on IR</span></div><div class="ldgrid">${leaders}</div>` : ''}
     <div class="ptools">
       <input type="text" id="pq" placeholder="Search players or NLL team" value="${esc(S.q)}" data-act="pq">
@@ -1804,7 +1805,9 @@ function renderPlayerList(){
   const box = $('#plist'); if(!box) return;
   const inSeason = Object.keys(S.season||{}).length > 0;
   const sort = S.sort || (inSeason ? 'avg' : 'proj');
-  const list = filteredPlayers(S.q, S.posF, S.stF, sort).filter(p => S.posF !== 'all' || posKey(pl(p).pos) !== 'G'), own = ownerMap(), mt = myTeam();
+  const own = ownerMap(), mt = myTeam();
+  // players without an NLL team stay in the pool (projections kept for if they sign) but aren't listed, unless a fantasy team has one
+  const list = filteredPlayers(S.q, S.posF, S.stF, sort).filter(p => (S.posF !== 'all' || posKey(pl(p).pos) !== 'G') && (pl(p).t || own[p]));
   if(S.sortFlip){ // lowest first, but players with nothing to sort on stay at the bottom
     const has = {avg:p=>S.season[p], gp:p=>S.season[p], last:p=>S.last?.[p], proj:p=>projOf(p)!=null, name:()=>true}[sort] || (()=>true);
     const a = list.filter(p => has(p)), b = list.filter(p => !has(p)); list.length = 0; list.push(...a.reverse(), ...b);
