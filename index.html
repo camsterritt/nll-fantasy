@@ -1340,6 +1340,12 @@ const CLEANUP = [
    offTeam:['angus-macdonell','arrow-booth','coltrane-tyson','kyle-gonsiorek','matt-spanger','micah-hanson','mike-mccannell','nate-ruff','obrigh-tallchief','owen-rice','raymond-cortes-ii','ryan-andrews','thomas-whitty','tyler-hendrycks','zack-belter'],
   },
   {id:'buf-2026-11-25b', note:'Shognosh spelling restored', rename:{'waukiigan-shognosh':'Waukiigan Shognosh'}},
+  {id:'cgy-2026-11-25', note:'Calgary Roughnecks roster clean-up',
+   team:{'liam-patten':'CGY', 'nathan-kapp':'CGY', 'greyson-beggs':'CGY'},
+   practice:['nathan-kapp','greyson-beggs','mathieu-gautier'],
+   ir:['jerrett-smith','riley-loewen'],
+   pos:{'riley-isaacs':'D'},
+   offTeam:['zach-moen','kaden-kublinskas','luke-soenen','alex-ross']},
 ];
 async function runCleanup(){
   if(S.cleanupRan || !isCommish() || !S.config || !db || !Object.keys(S.players).length) return;
@@ -1350,6 +1356,7 @@ async function runCleanup(){
     const st = await db.doc('nll/status').get(); const sd = st.exists ? clone(st.data()) : {}; sd.players = sd.players || {};
     for(const op of todo){
       for(const id of op.offTeam || []) if(P[id]) { P[id].t = ''; P[id].rel = today; delete sd.players[id]; }
+      for(const [id, t] of Object.entries(op.team || {})) if(P[id]) { P[id].t = t; delete P[id].rel; }
       for(const [id, n] of Object.entries(op.rename || {})) if(P[id]) P[id].n = n;
       for(const id of op.holdout || []) if(P[id]) sd.players[id] = {list:'Holdout List', date:today, team:P[id].t || '', manual:true};
       for(const id of op.practice || []) if(P[id]) sd.players[id] = {list:'Practice Player List', date:today, team:P[id].t || '', manual:true};
