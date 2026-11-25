@@ -644,6 +644,8 @@ tr.lu-empty td{background:repeating-linear-gradient(-45deg,transparent 0 6px,var
 .lu-fill.dbl{background:var(--win-soft);color:var(--win)}
 .tm-unsub{background:transparent;border:1px solid var(--band2);color:var(--band-muted);font:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;cursor:pointer}
 .tm-unsub:hover{color:var(--band-ink);border-color:var(--band-ink)}
+.pill.inj.prac{background:#E0ECFF;color:#1D4ED8;border-color:#1D4ED8}
+.pill.inj.hold{background:#F3E8FF;color:#7E22CE;border-color:#7E22CE}
 .lu-fill.open{background:#E0ECFF;color:#1D4ED8}
 .rec{font-weight:500;color:var(--muted);font-size:.92em}
 .tm-olist{display:flex;flex-direction:column}
@@ -1111,10 +1113,14 @@ function coverage(pids){
   return out;
 }
 const nllInj = pid => S.nll?.players?.[pid] || null;
+/* players on an NLL injured, practice or holdout list: not playing, and allowed in IR slots */
+const listKind = l => /practice/i.test(l||'') ? 'prac' : /hold\s*-?\s*out/i.test(l||'') ? 'hold' : 'ir';
+const KIND_LAB = {ir:'IR', prac:'Practice', hold:'Holdout'}, KIND_SHORT = {ir:'INJ', prac:'PRAC', hold:'HOLDOUT'};
+const nllKind = pid => { const s = nllInj(pid); return s ? listKind(s.list) : null; };
 function injTag(pid, onIR){
   const s = nllInj(pid);
-  if(s) return `<span class="pill inj" title="NLL: ${esc(s.list)} since ${esc(s.date)}">IR</span>`;
-  if(onIR) return `<span class="pill gx2" title="No longer on an NLL injured list">Healthy: activate</span>`;
+  if(s){ const k = listKind(s.list); return `<span class="pill inj ${k}" title="NLL: ${esc(s.list)} since ${esc(s.date)}">${KIND_LAB[k]}</span>`; }
+  if(onIR) return `<span class="pill gx2" title="No longer on an NLL injured, practice or holdout list">Healthy: activate</span>`;
   return '';
 }
 const poLabel = fw => { const r = cfg().regWeeks; return fw===r+1 ? 'SF' : fw===r+2 ? 'F' : ''; };
@@ -1638,15 +1644,15 @@ function vTeam(){
     ins.forEach((p, n) => { const o = outs[n]; if(o) moves.push({k, i:o[1], inP:p, outP:o[0]}); });
     weak[k] = L[k].length - best.length;
   }
-  const why = p => !p ? 'empty spot' : nllInj(p) ? 'injured' : gamesFor(p, w) === 0 ? 'bye' : fmt(wv(p))+' proj';
+  const why = p => !p ? 'empty spot' : nllInj(p) ? ({ir:'injured',prac:'practice roster',hold:'holdout'})[nllKind(p)] : gamesFor(p, w) === 0 ? 'bye' : fmt(wv(p))+' proj';
   const last = p => esc(pl(p).n.split(' ').slice(1).join(' ') || pl(p).n);
-  const tagOut = p => !p ? '' : nllInj(p) ? '<span class="sm-tag bad">INJ</span>' : gamesFor(p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-tag">${fmt(wv(p))}</span>`;
+  const tagOut = p => !p ? '' : nllInj(p) ? `<span class="sm-tag bad">${KIND_SHORT[nllKind(p)]}</span>` : gamesFor(p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-tag">${fmt(wv(p))}</span>`;
   const tagIn = p => gamesFor(p, w) === 2 ? '<span class="sm-tag good">2G</span>' : (() => { const g = (NLL_SCHED[nllWeekOf(w)]||[]).find(x => x[0]===pl(p).t || x[1]===pl(p).t); return g ? `<span class="sm-opp">${g[0]===pl(p).t ? '@ '+esc(g[1]) : 'vs '+esc(g[0])}</span>` : ''; })();
   // one move per line: bench the weak starters first, then start someone in each open spot
   const singles = [...moves.filter(m => m.outP).map(m => ({act:'bench', p:m.outP, k:m.k, i:m.i})), ...moves.filter(m => !m.outP).map(m => ({act:'start', p:m.inP, k:m.k, i:m.i}))];
   const mvCard = lineupEditable && singles.length ? `<div class="card tm-side-c sm-card"><div class="eyebrow">Lineup fixes <span class="sm-n">${singles.length}</span></div>
       <div class="sm-list">${singles.map(m => `<div class="sm-r">
-        <span class="sm-i"><span class="sm-il"><b data-sched="${esc(m.p)}" data-kind="card">${esc(pl(m.p).n)}</b>${teamBadge(pl(m.p).t)}</span>${m.act === 'bench' ? (nllInj(m.p) ? '<span class="sm-tag bad">INJURED</span>' : gamesFor(m.p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-opp">${fmt(wv(m.p))} proj · bench has better</span>`) : tagIn(m.p)}</span>
+        <span class="sm-i"><span class="sm-il"><b data-sched="${esc(m.p)}" data-kind="card">${esc(pl(m.p).n)}</b>${teamBadge(pl(m.p).t)}</span>${m.act === 'bench' ? (nllInj(m.p) ? `<span class="sm-tag bad">${({ir:'INJURED',prac:'PRACTICE',hold:'HOLDOUT'})[nllKind(m.p)]}</span>` : gamesFor(m.p, w) === 0 ? '<span class="sm-tag bad">BYE</span>' : `<span class="sm-opp">${fmt(wv(m.p))} proj · bench has better</span>`) : tagIn(m.p)}</span>
         ${m.act === 'bench' ? `<button class="btn drp" data-act="benchNow" data-k="${m.k}" data-i="${m.i}">Bench</button>` : `<button class="btn swp go" data-act="slotPick" data-k="${m.k}" data-i="${m.i}" data-p="${esc(m.p)}">Start</button>`}</div>`).join('')}</div>
       <button class="btn sm-all" data-act="bestLineup">Apply all</button>
     </div>` : '';
@@ -1683,7 +1689,7 @@ function vTeam(){
     <div class="card flush"><div class="tm-h"><h3>Bench</h3><span class="sub">${bench.length} ${bench.length===1?'player':'players'}</span></div>
       <div class="tbl"><table class="ptable lu">${head('Player')}<tbody>${bench.map(row).join('') || `<tr><td colspan="5" class="dim" style="text-align:center;padding:18px">${(t.roster||[]).length ? 'Everyone is in the lineup.' : 'No players yet. Players arrive through the draft or free agency.'}</td></tr>`}</tbody></table></div></div>
     <div class="card flush"><div class="tm-h"><h3>Injured reserve</h3><span class="sub">${(t.ir||[]).length}/${c.irMax}</span></div><div class="tbl"><table class="ptable lu"><tbody>${(t.ir||[]).map(row).join('')}${Array.from({length: Math.max(0, c.irMax - (t.ir||[]).length)}, () => `<tr class="lu-empty"><td colspan="5"><span class="dim">Empty IR spot</span></td></tr>`).join('')}</tbody></table></div>
-      <p class="sub" style="margin:0;padding:8px 16px 12px">Only players on an NLL injured list can go on IR; they show in red with a <b>To IR</b> button.</p></div>
+      <p class="sub" style="margin:0;padding:8px 16px 12px">Players on an NLL injured, practice or holdout list can go on IR; they show in red with a <b>To IR</b> button.</p></div>
   </div><aside class="stack tm-side">${mvCard}${faCard}${mpCard}${oppCard}${lgCard}</aside></div></div>`;
 }
 const ordinal = n => n + (['th','st','nd','rd'][(n%100-20)%10] || ['th','st','nd','rd'][n%100] || 'th');
@@ -2088,7 +2094,7 @@ function vActivity(){
       case 'drop': who = tm(x.team); what = G(ic('drop','−','Dropped'),P(x.drop)); break;
       case 'ir': who = tm(x.team); what = `${P(x.pid)}${arrow}${IRp}`; tip = x.auto ? `Automatic: NLL ${x.list||'injured list'}` : ''; break;
       case 'activate': who = tm(x.team); what = `${P(x.pid)}${G(arrow,'<span class="pill gx2">Active</span>')}`; tip = x.auto ? 'Automatic: NLL activated him' : ''; break;
-      case 'irflag': who = tm(x.team); what = `${P(x.pid)}<span class="pill inj">IR full</span>`; tip = 'On an NLL injured list, but this team’s IR is full'; break;
+      case 'irflag': who = tm(x.team); what = `${P(x.pid)}<span class="pill inj">IR full</span>`; tip = 'On an NLL injured, practice or holdout list, but this team’s IR is full'; break;
       case 'draft': who = tm(x.team); what = `${ic('pk','#'+x.pick,'Draft pick '+x.pick)}${P(x.pid)}`; break;
       case 'nllteam': who = nll; what = x.how === 'release' ? G(P(x.pid,false), arrow, '<span class="pill">Released</span>') : G(P(x.pid,false),arrow,teamBadge(x.to)); tip = x.how === 'trade' ? 'NLL trade' : x.how === 'release' ? 'Released'+(x.from?' by '+(NLL_CITY[x.from]||x.from):'') : 'NLL signing'; break;
       case 'nlladd': case 'newplayer': who = nll; what = `${ic('add','+','Added to the player pool')}${P(x.pid)}`; tip = `Signed with ${x.to}${x.type==='newplayer'?'; no past stats, so check his position':''}`; break;
@@ -2129,7 +2135,7 @@ function vRules(){
       <div class="rl-how">
         <section><h4>Lineups</h4><p>Start ${plural(c.slots.F,'forward')}, ${c.slots.DT} defence or transition players and ${plural(c.slots.G,'goalie')}. Lineups lock when the commissioner locks the week, usually before the first game. If you don’t make changes, last week’s lineup carries over and empty spots fill from your bench.</p></section>
         <section><h4>Double weeks</h4><p>A player whose NLL team plays twice in a week scores for both games. Watch for byes too: a player with no game that week scores nothing.</p></section>
-        <section><h4>Injured reserve</h4><p>Only players on an NLL injured list (IR, IR season-ending or PUP) can go on IR. The site moves them there automatically when the NLL does, and back when they’re activated.</p></section>
+        <section><h4>Injured reserve</h4><p>Only players on an NLL injured list (IR, IR season-ending or PUP), the practice roster or a holdout list can go on IR; they’re tagged IR, Practice or Holdout. The site moves them there automatically when the NLL does, and back when they’re activated.</p></section>
         <section><h4>Matchups</h4><p>Each week you play one team head-to-head. The higher total wins; equal totals are a tie. Standings go by record.</p></section>
         <section><h4>Playoffs</h4><p>The top ${c.playoffTeams} teams make it. Seed 1 plays 4 and 2 plays 3 in the semifinals, and the winners meet in the championship the following week.</p></section>
         <section><h4>Free agents</h4><p>Any player not on a fantasy team is a free agent. The first manager to add him gets him; there are no waivers or claim order.</p></section>
@@ -2230,6 +2236,12 @@ function vCommish(){
     <div class="row"><button class="btn" data-act="nllPreview">Preview</button>${S.nllPv ? `<button class="btn primary" data-act="nllApply" ${S.nllPv.items.some(i=>!i.done)?'':'disabled'}>Apply ${S.nllPv.items.filter(i=>!i.done).length} new</button><button class="btn ghost" data-act="nllCancel">Cancel</button>` : ''}</div>
     ${S.nllPv ? (S.nllPv.items.length ? `<div class="nlp">${S.nllPv.items.map(it => `<div class="nlp-r${it.done?' done':''}"><div class="nlp-d">${esc(it.date)}${it.done?' · <b>already applied</b>':''}</div><div class="nlp-t">${esc(it.text)}</div><div class="nlp-fx">${it.fx.length ? it.fx.map(nllFxText).join('<br>') : '<span class="warn">Couldn’t read this one. Tell Claude the wording.</span>'}</div></div>`).join('')}</div>` : '<div class="note">No transactions found in that paste.</div>') : ''}
   </div>
+
+  <div class="card stack"><h3>Tag a player: IR, Practice or Holdout</h3>
+    <p class="sub" style="margin:0">For when the NLL lists don’t cover it. A tagged player can go in an IR slot and is treated as not playing. Removing a tag makes him active again (if he’s on a fantasy IR, his manager sees “Healthy: activate”).</p>
+    <div class="row"><input type="text" id="tagQ" list="tagList" placeholder="Player name" style="flex:1 1 200px"><datalist id="tagList">${Object.keys(S.players).map(p => `<option value="${esc(pl(p).n)}">`).join('')}</datalist>
+      <select id="tagKind"><option value="ir">IR (injured)</option><option value="prac">Practice</option><option value="hold">Holdout</option><option value="">Remove tag</option></select>
+      <button class="btn primary" data-act="tagPlayer">Apply</button></div></div>
 
   <div class="card stack"><h3>NLL injury feed</h3>
     <p class="sub" style="margin:0">A scheduled task reads the NLL transactions page twice a day. When the NLL puts a player on an injured list (IR, IR season-ending or PUP), he is moved to his fantasy team’s IR automatically; when he’s activated, he comes back to the roster if there’s room. Only players on an NLL injured list can be put on IR. ${S.nll?.checked ? `Last check: ${esc(new Date(S.nll.checked).toLocaleString())}.` : ''} Latest NLL transaction read: ${esc(S.nll?.lastDate || 'none yet')}.</p>
@@ -2354,7 +2366,7 @@ const logTx = x => db.collection('transactions').add(Object.assign({ts:Date.now(
 const NLL_TEAMS = [['BUF',['buffalo','bandits']],['CGY',['calgary','roughnecks']],['COL',['colorado','mammoth']],['GA',['georgia','geogia','swarm']],['HFX',['halifax','thunderbirds']],['LV',['las vegas','desert dogs']],['OSH',['oshawa','firewolves']],['ROC',['rochester','knighthawks']],['SD',['san diego','seals']],['SSK',['saskatchewan','rush']],['TOR',['toronto','rock']],['VAN',['vancouver','warriors']]];
 const teamIn = str => { const x = String(str||'').toLowerCase(); for(const [a,ks] of NLL_TEAMS) if(ks.some(k => new RegExp('\\b'+k+'\\b').test(x))) return a; return null; };
 const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-const isInj = l => /injured reserve|physically unable/i.test(l||'');
+const isInj = l => /injured reserve|physically unable|practice|hold\s*-?\s*out/i.test(l||'');
 const isAct = l => /active roster|practice/i.test(l||'');
 function splitNames(x){
   return String(x||'').replace(/\bgoalie\b|\bgoaltender\b|\bforward\b|\bdefen[cs]eman\b|\btransition\b/gi,'').replace(/\s+and\s+/g, ',').split(',').map(n => n.trim().replace(/^(?:and)\s+/i,'')).filter(n => n && /[A-Za-z]/.test(n) && !/pick|round|draft|consideration|future|rights/i.test(n));
@@ -2570,7 +2582,7 @@ async function doIR(tid, pid, toIR){
   await run(() => withLock(async () => {
     const T = await freshTeams(), t = T[tid], c = cfg();
     let roster = t.roster||[], ir = t.ir||[];
-    if(toIR){ if(!nllInj(pid)) fail(`${pl(pid).n} isn’t on an NLL injured list, so he can’t go on IR.`); if(ir.length>=c.irMax) fail('IR is full.'); roster = roster.filter(p=>p!==pid); ir = [...ir, pid]; }
+    if(toIR){ if(!nllInj(pid)) fail(`${pl(pid).n} isn’t on an NLL injured, practice or holdout list, so he can’t go on IR.`); if(ir.length>=c.irMax) fail('IR is full.'); roster = roster.filter(p=>p!==pid); ir = [...ir, pid]; }
     else { if(roster.length>=c.rosterMax) fail('Your roster is full. Drop someone first.'); ir = ir.filter(p=>p!==pid); roster = [...roster, pid]; }
     await db.doc('teams/'+tid).update({roster, ir});
     await logTx({type:toIR?'ir':'activate', team:tid, pid});
@@ -3021,6 +3033,13 @@ document.addEventListener('click', async e => {
     case 'pick': if(S.confirm==='pick:'+b.dataset.p){ S.confirm=null; await draftPick(b.dataset.p); } else { S.confirm='pick:'+b.dataset.p; renderDraftList(); } break;
     case 'undoPick': await undoPick(); break;
     case 'rebuildPreview': await rebuildPreview(); break;
+    case 'tagPlayer': { const name = ($('#tagQ')?.value || '').trim(), kind = $('#tagKind')?.value || '';
+      const pid = Object.keys(S.players).find(p => keyOf(pl(p).n) === keyOf(name)); if(!pid){ toast('No player by that name in the pool.', true); break; }
+      const LIST = {ir:'Injured Reserve List', prac:'Practice Player List', hold:'Holdout List'};
+      await run(async () => { const cur = (await db.doc('nll/status').get()); const sd = cur.exists ? clone(cur.data()) : {}; sd.players = sd.players || {};
+        if(kind) sd.players[pid] = {list:LIST[kind], date:new Date().toISOString().slice(0,10), team:pl(pid).t || '', manual:true}; else delete sd.players[pid];
+        await db.doc('nll/status').set(sd); }, kind ? `${pl(pid).n} tagged ${KIND_LAB[kind]}` : `${pl(pid).n}’s tag removed`);
+      if($('#tagQ')) $('#tagQ').value = ''; break; }
     case 'fixRosters': await run(() => txn(async tx => { const d = await tx.get('draft/state'); const T = await txnTeams(tx, d); const by = {}; (d.picks||[]).forEach(x => (by[x.team] = by[x.team] || []).push(x.pid));
         for(const t of Object.keys(T)) tx.update('teams/'+t, {roster: by[t] || [], ir: []}); }), 'Rosters now match the board'); break;
     case 'rebuildApply': await rebuildApply(); break;
